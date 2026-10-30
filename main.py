@@ -4,6 +4,7 @@ import shutil
 import hashlib
 import secrets
 import re
+import time
 from datetime import datetime, timedelta
 from fastapi import FastAPI, UploadFile, File, Form, Header, HTTPException, Depends, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -35,6 +36,9 @@ allow_headers=["*"],
 )
 # Initialize SQLite database
 vector_db = VectorStore()
+
+# Track app start time for uptime reporting
+APP_START_TIME = time.time()
 
 # Pydantic Schemas
 class ChatMessage(BaseModel):
@@ -129,6 +133,72 @@ async def get_current_user(
         pass
         
     return session
+
+# Health Check Endpoint
+
+@app.get("/api/health")
+def health_check():
+    """Public health check endpoint. Returns overall status and component checks."""
+    components = {}
+    overall_status = "healthy"
+
+    # Check database connectivity
+    try:
+        conn = vector_db._get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1")
+        cursor.fetchone()
+        conn.close()
+        components["database"] = {
+            "status": "healthy",
+            "engine": "postgresql" if vector_db.is_postgres else "sqlite"
+        }
+    except Exception as e:
+        components["database"] = {"status": "unhealthy", "error": str(e)}
+        overall_status = "unhealthy"
+
+    # Check upload directory exists and is writable
+    try:
+        upload_dir = config.UPLOAD_DIR
+        os.makedirs(upload_dir, exist_ok=True)
+        test_path = os.path.join(upload_dir, ".healthcheck")
+        with open(test_path, "w") as f:
+            f.write("ok")
+        os.remove(test_path)
+        components["storage"] = {"status": "healthy", "path": upload_dir}
+    except Exception as e:
+        components["storage"] = {"status": "unhealthy", "error": str(e)}
+        overall_status = "unhealthy"
+
+    # Check at least one AI provider key is configured
+    try:
+        configured = [
+            name for name, key in {
+                "gemini": config.GEMINI_API_KEY,
+                "openai": config.OPENAI_API_KEY,
+                "claude": config.CLAUDE_API_KEY,
+                "generic": config.GENERIC_API_KEY,
+            }.items() if key
+        ]
+        if configured:
+            components["ai_providers"] = {"status": "healthy", "configured": configured}
+        else:
+            components["ai_providers"] = {"status": "degraded", "configured": [], "note": "No AI provider API keys configured."}
+            if overall_status == "healthy":
+                overall_status = "degraded"
+    except Exception as e:
+        components["ai_providers"] = {"status": "unhealthy", "error": str(e)}
+        overall_status = "unhealthy"
+
+    response = {
+        "status": overall_status,
+        "uptime_seconds": round(time.time() - APP_START_TIME, 2),
+        "timestamp": datetime.now().isoformat(),
+        "components": components
+    }
+
+    status_code = 200 if overall_status in ("healthy", "degraded") else 503
+    return JSONResponse(content=response, status_code=status_code)
 
 # Auth Endpoints
 
