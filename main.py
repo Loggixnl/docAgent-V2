@@ -26,7 +26,7 @@ app = FastAPI(
 # Enable CORS for cross-origin frontend requests
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["https://docagent-v2-frontend-production.up.railway.app/"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
