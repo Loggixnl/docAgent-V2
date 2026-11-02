@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from fastapi import FastAPI, UploadFile, File, Form, Header, HTTPException, Depends, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from pydantic import BaseModel
 from typing import List, Optional
 
@@ -17,6 +17,7 @@ import config
 from vector_store import VectorStore
 import document_processor
 import ai_agent
+import email_service
 
 # Initialize FastAPI App
 app = FastAPI(
@@ -27,9 +28,7 @@ app = FastAPI(
 # Enable CORS for cross-origin frontend requests
 app.add_middleware(
 CORSMiddleware,
-allow_origins=[
-"https://docagent-v2-frontend-production.up.railway.app"
-],
+allow_origins=["*"],  # Allow all origins for simplicity; adjust in production
 allow_credentials=True,
 allow_methods=["*"],
 allow_headers=["*"],
@@ -219,27 +218,43 @@ def register_user(request: RegisterRequest):
         
     existing_user = vector_db.get_user_by_email(email)
     if existing_user:
-        raise HTTPException(status_code=400, detail="This email is already registered. Please log in.")
+        if existing_user.get("email_verified"):
+            raise HTTPException(status_code=400, detail="This email is already registered. Please log in.")
+        # Unverified account: regenerate token and resend the email
+        verify_token = secrets.token_urlsafe(32)
+        token_expires = (datetime.now() + timedelta(hours=24)).isoformat()
+        vector_db.set_user_verification_token(email, verify_token, token_expires)
+        email_service.send_verification_email(email, verify_token)
+        return {
+            "success": True,
+            "email": email,
+            "requires_verification": True,
+            "message": "This email is already registered but not verified. A new verification email has been sent."
+        }
         
     user_id = str(uuid.uuid4())
     chatbot_id = "cb_" + secrets.token_hex(6)
     password_hash = hash_password(password)
+    verify_token = secrets.token_urlsafe(32)
+    token_expires = (datetime.now() + timedelta(hours=24)).isoformat()
     
     try:
-        vector_db.create_user(user_id, email, password_hash, chatbot_id)
+        vector_db.create_user(
+            user_id, email, password_hash, chatbot_id,
+            email_verified=0,
+            verification_token=verify_token,
+            verification_token_expires=token_expires
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create user: {str(e)}")
-        
-    # Auto-login
-    token = secrets.token_hex(24)
-    expires_at = (datetime.now() + timedelta(days=30)).isoformat()
-    vector_db.create_session(token, user_id, chatbot_id, expires_at)
-    
+
+    email_service.send_verification_email(email, verify_token)
+
     return {
         "success": True,
-        "token": token,
         "email": email,
-        "chatbot_id": chatbot_id
+        "requires_verification": True,
+        "message": "Account created. Please check your email to verify your account before logging in."
     }
 
 @app.post("/api/auth/login")
@@ -250,7 +265,13 @@ def login_user(request: AuthRequest):
     user = vector_db.get_user_by_email(email)
     if not user or not verify_password(password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid email or password.")
-        
+
+    if not user.get("email_verified"):
+        raise HTTPException(
+            status_code=403,
+            detail="Email not verified. Please check your inbox for the verification link, or resend it."
+        )
+
     token = secrets.token_hex(24)
     expires_at = (datetime.now() + timedelta(days=30)).isoformat()
     vector_db.create_session(token, user["id"], user["chatbot_id"], expires_at)
@@ -261,6 +282,88 @@ def login_user(request: AuthRequest):
         "email": user["email"],
         "chatbot_id": user["chatbot_id"]
     }
+
+@app.get("/api/auth/verify-email")
+def verify_email(token: str):
+    """Verify an email address from the link in the verification email."""
+    try:
+        user = vector_db.verify_user_by_token(token)
+    except ValueError as e:
+        return _verification_page(False, str(e))
+
+    if not user:
+        return _verification_page(False, "Invalid or already-used verification link.")
+
+    return _verification_page(
+        True,
+        "Your email has been verified! You can now log in to your account.",
+        login_url=f"{config.APP_BASE_URL}/"
+    )
+
+@app.post("/api/auth/resend-verification")
+def resend_verification(request: AuthRequest):
+    """Resend the verification email for an existing unverified account."""
+    email = request.email.strip().lower()
+    user = vector_db.get_user_by_email(email)
+
+    # Return the same response whether the user exists or not, to avoid email enumeration.
+    if not user or user.get("email_verified"):
+        return {
+            "success": True,
+            "message": "If an unverified account exists for this email, a verification link has been sent."
+        }
+
+    verify_token = secrets.token_urlsafe(32)
+    token_expires = (datetime.now() + timedelta(hours=24)).isoformat()
+    vector_db.set_user_verification_token(email, verify_token, token_expires)
+    email_service.send_verification_email(email, verify_token)
+
+    return {
+        "success": True,
+        "message": "If an unverified account exists for this email, a verification link has been sent."
+    }
+
+def _verification_page(success: bool, message: str, login_url: str = None) -> HTMLResponse:
+    """Render a simple server-side HTML page for the email verification link."""
+    if success:
+        icon = "✓"
+        icon_bg = "#0d9488"
+        action = (
+            f'<a href="{login_url}" style="background:#0d9488;color:#fff;padding:12px 28px;border-radius:999px;text-decoration:none;font-weight:bold;font-size:14px;display:inline-block;">Go to Login</a>'
+            if login_url else ""
+        )
+    else:
+        icon = "!"
+        icon_bg = "#dc2626"
+        action = (
+            f'<p style="font-size:13px;color:#64748b;">Return to the app and use <strong>"Resend verification email"</strong> to get a new link.</p>'
+        )
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Verification - DocAgent AI</title>
+  <style>
+    body {{ font-family: Arial, sans-serif; background: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }}
+    .card {{ background: #fff; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.08); padding: 48px 40px; max-width: 440px; text-align: center; }}
+    .icon {{ width: 64px; height: 64px; border-radius: 50%; background: {icon_bg}; color: #fff; font-size: 32px; font-weight: bold; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; }}
+    h1 {{ font-size: 22px; color: #0f172a; margin: 0 0 12px; }}
+    p {{ font-size: 14px; color: #475569; line-height: 1.6; margin: 0 0 8px; }}
+    .action {{ margin-top: 24px; }}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">{icon}</div>
+    <h1>{"Email Verified" if success else "Verification Failed"}</h1>
+    <p>{message}</p>
+    <div class="action">{action}</div>
+  </div>
+</body>
+</html>"""
+    return HTMLResponse(content=html, status_code=200 if success else 400)
 
 @app.post("/api/auth/logout")
 def logout_user(current_user: dict = Depends(get_current_user), x_session_token: Optional[str] = Header(None), authorization: Optional[str] = Header(None)):
