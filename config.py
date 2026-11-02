@@ -48,6 +48,30 @@ SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "DocAgent AI").strip()
 SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "true").strip().lower() not in ("false", "0", "no")
 SMTP_USE_SSL = os.getenv("SMTP_USE_SSL", "false").strip().lower() in ("true", "1", "yes")
 
+# CORS configuration
+# Explicit allowed origins (comma-separated). Defaults cover the production
+# frontend and local dev servers. Override with the CORS_ORIGINS env var.
+_CORS_DEFAULT_ORIGINS = ",".join([
+    "https://docagent-v2-frontend-production.up.railway.app",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+])
+_cors_origins_raw = os.getenv("CORS_ORIGINS", "").strip() or _CORS_DEFAULT_ORIGINS
+CORS_ORIGINS = [o.strip() for o in _cors_origins_raw.split(",") if o.strip()]
+
+# Regex of origins allowed on top of the list. Defaults to any Railway app
+# domain (Railway regenerates subdomains on redeploy). Set to "off" to disable.
+_cors_regex_raw = os.getenv("CORS_ORIGIN_REGEX", "").strip()
+if _cors_regex_raw.lower() in ("off", "false", "none", "disabled"):
+    CORS_ORIGIN_REGEX = None
+else:
+    CORS_ORIGIN_REGEX = _cors_regex_raw or r"https://[a-z0-9-]+\.up\.railway\.app"
+
+# Set to true to allow ANY origin (disables credentials). Use only for debugging.
+CORS_ALLOW_ALL = os.getenv("CORS_ALLOW_ALL", "").strip().lower() in ("true", "1", "yes")
+
 # Provider Configuration
 # Supported providers: "gemini", "openai", "claude", "generic", "openrouter", "groq"
 def _detect_default_provider():

@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from fastapi import FastAPI, UploadFile, File, Form, Header, HTTPException, Depends, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
+from fastapi.responses import FileResponse, JSONResponse, HTMLResponse, Response
 from pydantic import BaseModel
 from typing import List, Optional
 
@@ -26,15 +26,52 @@ app = FastAPI(
 )
 
 # Enable CORS for cross-origin frontend requests
-app.add_middleware(
-CORSMiddleware,
-allow_origins=[
-"https://docagent-v2-frontend-production.up.railway.app"
-],
-allow_credentials=True,
-allow_methods=["*"],
-allow_headers=["*"],
-)
+if config.CORS_ALLOW_ALL:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=config.CORS_ORIGINS,
+        allow_origin_regex=config.CORS_ORIGIN_REGEX,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+# The embeddable widget is served from arbitrary customer websites, so its
+# public endpoints must accept any origin. Registered after CORSMiddleware
+# so it runs first (outermost) and handles those preflights itself.
+WIDGET_PUBLIC_PATH_PREFIXES = ("/api/chat", "/api/widget/")
+
+@app.middleware("http")
+async def widget_public_cors(request: Request, call_next):
+    origin = request.headers.get("origin")
+    path = request.url.path
+    if not origin or not any(path.startswith(p) for p in WIDGET_PUBLIC_PATH_PREFIXES):
+        return await call_next(request)
+
+    if request.method == "OPTIONS":
+        return Response(
+            status_code=204,
+            headers={
+                "Access-Control-Allow-Origin": origin,
+                "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+                "Access-Control-Allow-Headers": request.headers.get("access-control-request-headers", "*"),
+                "Access-Control-Max-Age": "86400",
+                "Vary": "Origin",
+            },
+        )
+
+    response = await call_next(request)
+    response.headers["Access-Control-Allow-Origin"] = origin
+    response.headers["Vary"] = "Origin"
+    return response
 # Initialize SQLite database
 vector_db = VectorStore()
 
