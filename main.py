@@ -27,11 +27,11 @@ app = FastAPI(
 
 # Enable CORS for cross-origin frontend requests
 app.add_middleware(
-CORSMiddleware,
-allow_origins=["*"],  # Allow all origins for simplicity; adjust in production
-allow_credentials=True,
-allow_methods=["*"],
-allow_headers=["*"],
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 # Initialize SQLite database
 vector_db = VectorStore()
