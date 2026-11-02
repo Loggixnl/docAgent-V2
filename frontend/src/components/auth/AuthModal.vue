@@ -72,6 +72,50 @@
       <!-- Right Panel: Login / Signup Form -->
       <div class="p-8 md:p-12 flex items-center bg-slate-50/40">
         <div class="w-full">
+          <!-- Post-registration: Email verification notice -->
+          <div v-if="verificationSent" class="text-center py-4">
+            <div class="w-16 h-16 rounded-full bg-lightTeal/20 text-darkTeal flex items-center justify-center text-4xl mx-auto mb-5">
+              <i class="mdi mdi-email-check-outline"></i>
+            </div>
+            <h3 class="text-xl font-bold text-slate-900 font-heading mb-2">Check your email</h3>
+            <p class="text-xs text-slate-600 leading-relaxed font-medium mb-2">
+              We've sent a verification link to
+            </p>
+            <p class="text-sm font-bold text-darkTeal mb-4">{{ pendingEmail }}</p>
+            <p class="text-xs text-slate-500 font-medium mb-6">
+              Click the link in the email to activate your account, then log in here.
+              The link expires in 24 hours.
+            </p>
+
+            <div v-if="resendMessage" class="p-2.5 rounded-xl bg-green-50 border border-green-200 text-green-700 text-xs font-medium mb-4">
+              {{ resendMessage }}
+            </div>
+            <div v-if="errorMessage" class="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs font-medium mb-4">
+              {{ errorMessage }}
+            </div>
+
+            <button
+              type="button"
+              :disabled="resendLoading"
+              class="text-darkTeal hover:underline text-xs font-bold cursor-pointer disabled:opacity-50 mb-6"
+              @click="handleResend"
+            >
+              <i v-if="resendLoading" class="mdi mdi-loading mdi-spin"></i>
+              {{ resendLoading ? 'Sending...' : 'Resend verification email' }}
+            </button>
+
+            <div class="text-xs text-slate-600">
+              <button
+                type="button"
+                class="text-darkTeal hover:underline font-bold cursor-pointer"
+                @click="backToLogin"
+              >
+                Back to login
+              </button>
+            </div>
+          </div>
+
+          <template v-else>
           <div class="mb-6">
             <h3 class="text-xl font-bold text-slate-900 font-heading">
               {{ isRegister ? "Create an account." : "Let's start a conversation." }}
@@ -84,6 +128,20 @@
           <form @submit.prevent="handleSubmit" class="space-y-4">
             <div v-if="errorMessage" class="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs font-medium">
               {{ errorMessage }}
+              <button
+                v-if="showResendOnLoginError"
+                type="button"
+                class="block mt-1.5 text-darkTeal hover:underline font-bold cursor-pointer"
+                :disabled="resendLoading"
+                @click="handleResendFromLogin"
+              >
+                <i v-if="resendLoading" class="mdi mdi-loading mdi-spin"></i>
+                {{ resendLoading ? 'Sending...' : 'Resend verification email' }}
+              </button>
+            </div>
+
+            <div v-if="resendMessage" class="p-2.5 rounded-xl bg-green-50 border border-green-200 text-green-700 text-xs font-medium">
+              {{ resendMessage }}
             </div>
 
             <div class="flex flex-col gap-1.5">
@@ -149,6 +207,7 @@
               {{ isRegister ? "Log in here" : "Create an account" }}
             </button>
           </div>
+          </template>
         </div>
       </div>
     </div>
@@ -169,7 +228,7 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'success'])
 
-const { login, register, authMode } = useAuth()
+const { login, register, resendVerification, authMode } = useAuth()
 
 const isRegister = computed(() => authMode.value === 'register')
 const email = ref('')
@@ -178,18 +237,39 @@ const confirmPassword = ref('')
 const loading = ref(false)
 const errorMessage = ref('')
 
+// Email verification state
+const verificationSent = ref(false)
+const pendingEmail = ref('')
+const resendLoading = ref(false)
+const resendMessage = ref('')
+const showResendOnLoginError = ref(false)
+
 function toggleMode() {
   authMode.value = authMode.value === 'login' ? 'register' : 'login'
   errorMessage.value = ''
+  resendMessage.value = ''
+  showResendOnLoginError.value = false
 }
 
 function close() {
   errorMessage.value = ''
+  resendMessage.value = ''
+  showResendOnLoginError.value = false
+  verificationSent.value = false
   emit('close')
+}
+
+function backToLogin() {
+  verificationSent.value = false
+  resendMessage.value = ''
+  errorMessage.value = ''
+  authMode.value = 'login'
 }
 
 async function handleSubmit() {
   errorMessage.value = ''
+  resendMessage.value = ''
+  showResendOnLoginError.value = false
   const trimmedEmail = email.value.trim().toLowerCase()
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -213,14 +293,49 @@ async function handleSubmit() {
   try {
     if (isRegister.value) {
       await register(trimmedEmail, password.value, confirmPassword.value)
+      // Show the "check your email" screen instead of logging in
+      pendingEmail.value = trimmedEmail
+      verificationSent.value = true
     } else {
       await login(trimmedEmail, password.value)
+      emit('success')
     }
-    emit('success')
   } catch (err) {
     errorMessage.value = err.message || 'Authentication failed. Check your inputs.'
+    // 403 from the login endpoint means the email is not verified yet
+    if (err.status === 403) {
+      showResendOnLoginError.value = true
+    }
   } finally {
     loading.value = false
+  }
+}
+
+async function handleResend() {
+  resendMessage.value = ''
+  errorMessage.value = ''
+  resendLoading.value = true
+  try {
+    const data = await resendVerification(pendingEmail.value)
+    resendMessage.value = data.message || 'Verification email sent.'
+  } catch (err) {
+    errorMessage.value = err.message || 'Failed to resend verification email.'
+  } finally {
+    resendLoading.value = false
+  }
+}
+
+async function handleResendFromLogin() {
+  resendMessage.value = ''
+  errorMessage.value = ''
+  resendLoading.value = true
+  try {
+    const data = await resendVerification(email.value.trim().toLowerCase())
+    resendMessage.value = data.message || 'Verification email sent.'
+  } catch (err) {
+    errorMessage.value = err.message || 'Failed to resend verification email.'
+  } finally {
+    resendLoading.value = false
   }
 }
 </script>

@@ -35,6 +35,19 @@ DATABASE_URL = (
 )
 DB_PATH = os.getenv("DB_PATH", os.path.join(DATA_DIR, "vector_store.db"))
 
+# App base URL (used to build email verification links)
+APP_BASE_URL = os.getenv("APP_BASE_URL", "http://localhost:8000").strip().rstrip("/")
+
+# SMTP configuration for outgoing email (verification, etc.)
+SMTP_HOST = os.getenv("SMTP_HOST", "").strip()
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587") or 587)
+SMTP_USERNAME = os.getenv("SMTP_USERNAME", "").strip()
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "").strip()
+SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", "").strip() or SMTP_USERNAME
+SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "DocAgent AI").strip()
+SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "true").strip().lower() not in ("false", "0", "no")
+SMTP_USE_SSL = os.getenv("SMTP_USE_SSL", "false").strip().lower() in ("true", "1", "yes")
+
 # Provider Configuration
 # Supported providers: "gemini", "openai", "claude", "generic", "openrouter", "groq"
 def _detect_default_provider():

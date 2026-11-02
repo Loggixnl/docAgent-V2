@@ -434,7 +434,9 @@ export async function loginUser(email, password) {
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || 'Authentication failed.');
+    const error = new Error(err.detail || 'Authentication failed.');
+    error.status = res.status;
+    throw error;
   }
 
   return res.json();
@@ -454,6 +456,21 @@ export async function registerUser(email, password, confirmPassword) {
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.detail || 'Registration failed.');
+  }
+
+  return res.json();
+}
+
+export async function resendVerification(email) {
+  const res = await fetch(apiUrl('/api/auth/resend-verification'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password: '' })
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to resend verification email.');
   }
 
   return res.json();

@@ -4,6 +4,7 @@ import {
   getSessionToken,
   loginUser,
   registerUser,
+  resendVerification,
   getMe,
   logoutUser,
   getSettings,
@@ -61,13 +62,12 @@ async function handleLogin(userEmail, password) {
 
 async function handleRegister(userEmail, password, confirmPassword) {
   const data = await registerUser(userEmail, password, confirmPassword)
-  sessionToken.value = data.token
-  setSessionToken(data.token)
-  email.value = data.email
-  chatbotId.value = data.chatbot_id
-  await loadSettings()
-  isAuthModalOpen.value = false
+  // Registration requires email verification — no session is created yet.
   return data
+}
+
+async function handleResendVerification(userEmail) {
+  return await resendVerification(userEmail)
 }
 
 async function handleLogout() {
@@ -148,6 +148,7 @@ export function useAuth() {
     checkSession,
     login: handleLogin,
     register: handleRegister,
+    resendVerification: handleResendVerification,
     logout: handleLogout,
     loadSettings,
     updateSettings,
