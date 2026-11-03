@@ -35,8 +35,10 @@ DATABASE_URL = (
 )
 DB_PATH = os.getenv("DB_PATH", os.path.join(DATA_DIR, "vector_store.db"))
 
-# App base URL (used to build email verification links)
+# App base URL (used to build email verification links — must be the BACKEND URL)
 APP_BASE_URL = os.getenv("APP_BASE_URL", "http://localhost:8000").strip().rstrip("/")
+# Frontend URL (used for the post-verification "Go to Login" link)
+APP_FRONTEND_URL = os.getenv("APP_FRONTEND_URL", "").strip().rstrip("/") or APP_BASE_URL
 
 # SMTP configuration for outgoing email (verification, etc.)
 SMTP_HOST = os.getenv("SMTP_HOST", "").strip()
@@ -47,6 +49,14 @@ SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", "").strip() or SMTP_USERNAME
 SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "DocAgent AI").strip()
 SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "true").strip().lower() not in ("false", "0", "no")
 SMTP_USE_SSL = os.getenv("SMTP_USE_SSL", "false").strip().lower() in ("true", "1", "yes")
+
+# SendGrid configuration for outgoing email (verification, etc.)
+# Takes precedence over SMTP when SENDGRID_API_KEY and SENDGRID_TEMPLATE_ID are set.
+SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY", "").strip()
+SENDGRID_TEMPLATE_ID = os.getenv("SENDGRID_TEMPLATE_ID", "").strip()
+SENDGRID_FROM_EMAIL = os.getenv("SENDGRID_FROM_EMAIL", "noreply@docagent.ai").strip()
+SENDGRID_FROM_NAME = os.getenv("SENDGRID_FROM_NAME", SMTP_FROM_NAME).strip()
+SENDGRID_SUBJECT = os.getenv("SENDGRID_SUBJECT", "Account validation").strip()
 
 # CORS configuration
 # Explicit allowed origins (comma-separated). Defaults cover the production

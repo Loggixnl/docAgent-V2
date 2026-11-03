@@ -442,11 +442,12 @@ export async function loginUser(email, password) {
   return res.json();
 }
 
-export async function registerUser(email, password, confirmPassword) {
+export async function registerUser(firstName, email, password, confirmPassword) {
   const res = await fetch(apiUrl('/api/auth/register'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
+      first_name: firstName,
       email,
       password,
       confirm_password: confirmPassword

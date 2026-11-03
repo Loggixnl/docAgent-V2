@@ -112,6 +112,7 @@ class RegisterRequest(BaseModel):
     email: str
     password: str
     confirm_password: str
+    first_name: str = ""
 
 class AdminQuestionUpdate(BaseModel):
     status: Optional[str] = None
@@ -245,6 +246,7 @@ def register_user(request: RegisterRequest):
     email = request.email.strip().lower()
     password = request.password
     confirm_password = request.confirm_password
+    first_name = request.first_name.strip()
     
     if not is_valid_email(email):
         raise HTTPException(status_code=400, detail="Invalid email address format.")
@@ -259,41 +261,54 @@ def register_user(request: RegisterRequest):
     if existing_user:
         if existing_user.get("email_verified"):
             raise HTTPException(status_code=400, detail="This email is already registered. Please log in.")
-        # Unverified account: regenerate token and resend the email
+        # Legacy unverified account (created before deferred signup): refresh and resend
         verify_token = secrets.token_urlsafe(32)
         token_expires = (datetime.now() + timedelta(hours=24)).isoformat()
         vector_db.set_user_verification_token(email, verify_token, token_expires)
-        email_service.send_verification_email(email, verify_token)
+        email_service.send_verification_email(email, verify_token, existing_user.get("first_name", ""))
         return {
             "success": True,
             "email": email,
             "requires_verification": True,
-            "message": "This email is already registered but not verified. A new verification email has been sent."
+            "message": "This email is awaiting verification. A new verification email has been sent."
         }
-        
+
+    pending = vector_db.get_pending_registration(email)
+    verify_token = secrets.token_urlsafe(32)
+    token_expires = (datetime.now() + timedelta(hours=24)).isoformat()
+
+    if pending:
+        # Signup already awaiting verification: refresh the token and resend
+        vector_db.set_pending_verification_token(email, verify_token, token_expires)
+        email_service.send_verification_email(email, verify_token, pending.get("first_name", ""))
+        return {
+            "success": True,
+            "email": email,
+            "requires_verification": True,
+            "message": "This signup is awaiting email verification. A new verification email has been sent."
+        }
+
     user_id = str(uuid.uuid4())
     chatbot_id = "cb_" + secrets.token_hex(6)
     password_hash = hash_password(password)
-    verify_token = secrets.token_urlsafe(32)
-    token_expires = (datetime.now() + timedelta(hours=24)).isoformat()
-    
+
+    # No account is created yet — only a pending signup. The users row is created
+    # when the verification link is clicked (promote_pending_registration).
     try:
-        vector_db.create_user(
-            user_id, email, password_hash, chatbot_id,
-            email_verified=0,
-            verification_token=verify_token,
-            verification_token_expires=token_expires
+        vector_db.save_pending_registration(
+            email, user_id, chatbot_id, first_name,
+            password_hash, verify_token, token_expires
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to create user: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to create signup request: {str(e)}")
 
-    email_service.send_verification_email(email, verify_token)
+    email_service.send_verification_email(email, verify_token, first_name)
 
     return {
         "success": True,
         "email": email,
         "requires_verification": True,
-        "message": "Account created. Please check your email to verify your account before logging in."
+        "message": "Almost done! Please check your email and verify your account to activate it."
     }
 
 @app.post("/api/auth/login")
@@ -302,7 +317,16 @@ def login_user(request: AuthRequest):
     password = request.password
     
     user = vector_db.get_user_by_email(email)
-    if not user or not verify_password(password, user["password_hash"]):
+    if not user:
+        # No account yet — but a signup may be awaiting email verification
+        if vector_db.get_pending_registration(email):
+            raise HTTPException(
+                status_code=403,
+                detail="Email not verified. Please check your inbox for the verification link, or resend it."
+            )
+        raise HTTPException(status_code=401, detail="Invalid email or password.")
+
+    if not verify_password(password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid email or password.")
 
     if not user.get("email_verified"):
@@ -326,7 +350,11 @@ def login_user(request: AuthRequest):
 def verify_email(token: str):
     """Verify an email address from the link in the verification email."""
     try:
-        user = vector_db.verify_user_by_token(token)
+        # Normal path: promote a pending signup to a real account
+        user = vector_db.promote_pending_registration(token)
+        # Legacy path: token issued to a pre-existing users row
+        if not user:
+            user = vector_db.verify_user_by_token(token)
     except ValueError as e:
         return _verification_page(False, str(e))
 
@@ -336,31 +364,40 @@ def verify_email(token: str):
     return _verification_page(
         True,
         "Your email has been verified! You can now log in to your account.",
-        login_url=f"{config.APP_BASE_URL}/"
+        login_url=f"{config.APP_FRONTEND_URL}/"
     )
 
 @app.post("/api/auth/resend-verification")
 def resend_verification(request: AuthRequest):
     """Resend the verification email for an existing unverified account."""
     email = request.email.strip().lower()
-    user = vector_db.get_user_by_email(email)
 
-    # Return the same response whether the user exists or not, to avoid email enumeration.
+    # Return the same response whether the account exists or not, to avoid email enumeration.
+    generic_response = {
+        "success": True,
+        "message": "If an unverified account exists for this email, a verification link has been sent."
+    }
+
+    # Signup awaiting verification (no users row yet)
+    pending = vector_db.get_pending_registration(email)
+    if pending:
+        verify_token = secrets.token_urlsafe(32)
+        token_expires = (datetime.now() + timedelta(hours=24)).isoformat()
+        vector_db.set_pending_verification_token(email, verify_token, token_expires)
+        email_service.send_verification_email(email, verify_token, pending.get("first_name", ""))
+        return generic_response
+
+    # Legacy unverified users row
+    user = vector_db.get_user_by_email(email)
     if not user or user.get("email_verified"):
-        return {
-            "success": True,
-            "message": "If an unverified account exists for this email, a verification link has been sent."
-        }
+        return generic_response
 
     verify_token = secrets.token_urlsafe(32)
     token_expires = (datetime.now() + timedelta(hours=24)).isoformat()
     vector_db.set_user_verification_token(email, verify_token, token_expires)
-    email_service.send_verification_email(email, verify_token)
+    email_service.send_verification_email(email, verify_token, user.get("first_name", ""))
 
-    return {
-        "success": True,
-        "message": "If an unverified account exists for this email, a verification link has been sent."
-    }
+    return generic_response
 
 def _verification_page(success: bool, message: str, login_url: str = None) -> HTMLResponse:
     """Render a simple server-side HTML page for the email verification link."""

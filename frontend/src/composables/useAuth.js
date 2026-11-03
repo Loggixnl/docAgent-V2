@@ -60,8 +60,8 @@ async function handleLogin(userEmail, password) {
   return data
 }
 
-async function handleRegister(userEmail, password, confirmPassword) {
-  const data = await registerUser(userEmail, password, confirmPassword)
+async function handleRegister(firstName, userEmail, password, confirmPassword) {
+  const data = await registerUser(firstName, userEmail, password, confirmPassword)
   // Registration requires email verification — no session is created yet.
   return data
 }

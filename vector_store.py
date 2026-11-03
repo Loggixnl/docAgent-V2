@@ -111,6 +111,7 @@ class VectorStore:
         CREATE TABLE IF NOT EXISTS users (
             id TEXT PRIMARY KEY,
             email TEXT UNIQUE NOT NULL,
+            first_name TEXT DEFAULT '',
             password_hash TEXT NOT NULL,
             chatbot_id TEXT UNIQUE NOT NULL,
             api_key TEXT DEFAULT '',
@@ -131,8 +132,8 @@ class VectorStore:
                 conn.rollback()
 
         # Safe migration: Ensure email verification columns exist.
-        # Existing users are marked verified so nobody is locked out.
         for col_def in [
+            "first_name TEXT DEFAULT ''",
             "email_verified INTEGER DEFAULT 0",
             "verification_token TEXT DEFAULT ''",
             "verification_token_expires TEXT DEFAULT ''",
@@ -143,12 +144,44 @@ class VectorStore:
             except Exception:
                 if self.is_postgres:
                     conn.rollback()
+        # Backfill ONLY pre-verification accounts (ones that never had a token issued).
+        # Users awaiting verification carry a token and must never be auto-verified.
         try:
-            cursor.execute("UPDATE users SET email_verified = 1 WHERE email_verified IS NULL OR email_verified = 0")
+            cursor.execute(
+                "UPDATE users SET email_verified = 1 "
+                "WHERE (email_verified IS NULL OR email_verified = 0) "
+                "AND (verification_token IS NULL OR verification_token = '')"
+            )
             conn.commit()
         except Exception:
             if self.is_postgres:
                 conn.rollback()
+        # Repair: rows auto-verified by the old unconditional backfill still carry an
+        # unused verification token — they were never actually verified. Un-verify them.
+        try:
+            cursor.execute(
+                "UPDATE users SET email_verified = 0 "
+                "WHERE email_verified = 1 AND verification_token IS NOT NULL AND verification_token != ''"
+            )
+            conn.commit()
+        except Exception:
+            if self.is_postgres:
+                conn.rollback()
+
+        # Table 3b: Pending signups. A real users row is only created once the
+        # email address has been verified (see promote_pending_registration).
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS pending_registrations (
+            email TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            chatbot_id TEXT NOT NULL,
+            first_name TEXT DEFAULT '',
+            password_hash TEXT NOT NULL,
+            verification_token TEXT NOT NULL,
+            verification_token_expires TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+        """)
 
         # Table 4: User login sessions (auth tokens)
         cursor.execute("""
@@ -363,14 +396,14 @@ class VectorStore:
 
     # --- User Management Methods ---
 
-    def create_user(self, user_id, email, password_hash, chatbot_id, email_verified=0, verification_token="", verification_token_expires=""):
+    def create_user(self, user_id, email, password_hash, chatbot_id, first_name="", email_verified=0, verification_token="", verification_token_expires=""):
         """Insert a new user into the database."""
         conn = self._get_connection()
         cursor = conn.cursor()
         created_at = datetime.now().isoformat()
         cursor.execute(
-            self._q("INSERT INTO users (id, email, password_hash, chatbot_id, email_verified, verification_token, verification_token_expires, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"),
-            (user_id, email, password_hash, chatbot_id, email_verified, verification_token, verification_token_expires, created_at)
+            self._q("INSERT INTO users (id, email, first_name, password_hash, chatbot_id, email_verified, verification_token, verification_token_expires, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"),
+            (user_id, email, first_name, password_hash, chatbot_id, email_verified, verification_token, verification_token_expires, created_at)
         )
         conn.commit()
         conn.close()
@@ -379,7 +412,7 @@ class VectorStore:
         """Retrieve user details by email."""
         conn = self._get_connection()
         cursor = conn.cursor()
-        cursor.execute(self._q("SELECT id, email, password_hash, chatbot_id, api_key, email_verified, verification_token, verification_token_expires FROM users WHERE email = ?"), (email,))
+        cursor.execute(self._q("SELECT id, email, first_name, password_hash, chatbot_id, api_key, email_verified, verification_token, verification_token_expires FROM users WHERE email = ?"), (email,))
         row = cursor.fetchone()
         res = self._row_to_dict(cursor, row)
         conn.close()
@@ -395,6 +428,92 @@ class VectorStore:
         )
         conn.commit()
         conn.close()
+
+    # --- Pending registrations: no users row exists until the email is verified ---
+
+    def save_pending_registration(self, email, user_id, chatbot_id, first_name, password_hash, token, expires_at):
+        """Store a signup awaiting email verification (replaces any existing pending row)."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        created_at = datetime.now().isoformat()
+        cursor.execute(self._q("DELETE FROM pending_registrations WHERE email = ?"), (email,))
+        cursor.execute(
+            self._q("INSERT INTO pending_registrations (email, user_id, chatbot_id, first_name, password_hash, verification_token, verification_token_expires, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"),
+            (email, user_id, chatbot_id, first_name, password_hash, token, expires_at, created_at)
+        )
+        conn.commit()
+        conn.close()
+
+    def get_pending_registration(self, email):
+        """Retrieve a signup awaiting email verification by email."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            self._q("SELECT email, user_id, chatbot_id, first_name, password_hash, verification_token, verification_token_expires, created_at FROM pending_registrations WHERE email = ?"),
+            (email,)
+        )
+        row = cursor.fetchone()
+        res = self._row_to_dict(cursor, row)
+        conn.close()
+        return res
+
+    def set_pending_verification_token(self, email, token, expires_at):
+        """Refresh the verification token for a pending signup."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            self._q("UPDATE pending_registrations SET verification_token = ?, verification_token_expires = ? WHERE email = ?"),
+            (token, expires_at, email)
+        )
+        conn.commit()
+        conn.close()
+
+    def promote_pending_registration(self, token):
+        """Create the real account row when a pending signup's token is used.
+
+        Returns the user dict on success, None if the token is unknown.
+        Raises ValueError if the token has expired.
+        """
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            self._q("SELECT email, user_id, chatbot_id, first_name, password_hash, verification_token_expires FROM pending_registrations WHERE verification_token = ?"),
+            (token,)
+        )
+        row = cursor.fetchone()
+        res = self._row_to_dict(cursor, row)
+        if not res:
+            conn.close()
+            return None
+
+        try:
+            expires_at = datetime.fromisoformat(res.get("verification_token_expires") or "")
+        except Exception:
+            expires_at = None
+        if expires_at and datetime.now() > expires_at:
+            cursor.execute(self._q("DELETE FROM pending_registrations WHERE email = ?"), (res["email"],))
+            conn.commit()
+            conn.close()
+            raise ValueError("This verification link has expired. Please request a new one.")
+
+        cursor.execute(self._q("SELECT id FROM users WHERE email = ?"), (res["email"],))
+        existing = cursor.fetchone()
+        if existing:
+            # A legacy unverified row for this email already exists — just verify it.
+            cursor.execute(
+                self._q("UPDATE users SET email_verified = 1, verification_token = '', verification_token_expires = '' WHERE email = ?"),
+                (res["email"],)
+            )
+        else:
+            cursor.execute(
+                self._q("INSERT INTO users (id, email, first_name, password_hash, chatbot_id, email_verified, verification_token, verification_token_expires, created_at) VALUES (?, ?, ?, ?, ?, 1, '', '', ?)"),
+                (res["user_id"], res["email"], res.get("first_name") or "", res["password_hash"], res["chatbot_id"], datetime.now().isoformat())
+            )
+        cursor.execute(self._q("DELETE FROM pending_registrations WHERE email = ?"), (res["email"],))
+        conn.commit()
+        conn.close()
+        res["email_verified"] = 1
+        return res
 
     def verify_user_by_token(self, token):
         """Mark a user as verified if the token exists and has not expired.
@@ -416,19 +535,13 @@ class VectorStore:
 
         try:
             expires_at = datetime.fromisoformat(res.get("verification_token_expires") or "")
-            if datetime.now() > expires_at:
-                cursor.execute(
-                    self._q("UPDATE users SET verification_token = '', verification_token_expires = '' WHERE id = ?"),
-                    (res["id"],)
-                )
-                conn.commit()
-                conn.close()
-                raise ValueError("This verification link has expired. Please request a new one.")
-        except ValueError as e:
-            if "expired" in str(e).lower():
-                raise
         except Exception:
-            pass
+            expires_at = None
+        if expires_at and datetime.now() > expires_at:
+            # Keep the token: the account must stay unverified and must never be
+            # picked up by the startup backfill.
+            conn.close()
+            raise ValueError("This verification link has expired. Please request a new one.")
 
         cursor.execute(
             self._q("UPDATE users SET email_verified = 1, verification_token = '', verification_token_expires = '' WHERE id = ?"),

@@ -144,6 +144,20 @@
               {{ resendMessage }}
             </div>
 
+            <div v-if="isRegister" class="flex flex-col gap-1.5">
+              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">First Name</label>
+              <div class="relative flex items-center">
+                <i class="mdi mdi-account-outline absolute left-4 text-darkTeal text-base"></i>
+                <input 
+                  v-model="firstName" 
+                  type="text" 
+                  placeholder="John" 
+                  class="w-full bg-white border border-gray-300 focus:border-darkTeal focus:ring-1 focus:ring-darkTeal/20 outline-none rounded-xl py-2.5 pl-11 pr-4 text-xs text-slate-900 placeholder-gray-400 transition-all font-medium" 
+                  :required="isRegister"
+                >
+              </div>
+            </div>
+
             <div class="flex flex-col gap-1.5">
               <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Email Address</label>
               <div class="relative flex items-center">
@@ -232,6 +246,7 @@ const { login, register, resendVerification, authMode } = useAuth()
 
 const isRegister = computed(() => authMode.value === 'register')
 const email = ref('')
+const firstName = ref('')
 const password = ref('')
 const confirmPassword = ref('')
 const loading = ref(false)
@@ -279,6 +294,10 @@ async function handleSubmit() {
   }
 
   if (isRegister.value) {
+    if (!firstName.value.trim()) {
+      errorMessage.value = 'Please enter your first name.'
+      return
+    }
     if (password.value !== confirmPassword.value) {
       errorMessage.value = 'Passwords do not match!'
       return
@@ -292,7 +311,7 @@ async function handleSubmit() {
   loading.value = true
   try {
     if (isRegister.value) {
-      await register(trimmedEmail, password.value, confirmPassword.value)
+      await register(firstName.value.trim(), trimmedEmail, password.value, confirmPassword.value)
       // Show the "check your email" screen instead of logging in
       pendingEmail.value = trimmedEmail
       verificationSent.value = true
