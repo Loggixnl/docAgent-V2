@@ -23,11 +23,7 @@
 
     // apiUrl: prefer data-api-url attribute (set by both embed and console snippets),
     // then fall back to the origin the script was loaded from, then production fallback.
-    const apiUrl = (
-        (currentScript && currentScript.getAttribute('data-api-url')) ||
-        scriptOrigin ||
-        'https://docagent-v2-production.up.railway.app'
-    ).replace(/\/+$/, '');
+    const apiUrl = ('https://docagent-v2-frontend-production.up.railway.app').replace(/\/+$/, '');
     const chatbotId = currentScript.getAttribute('data-chatbot-id') || 'default';
     const botName = currentScript.getAttribute('data-bot-name') || 'DocAgent AI';
     const themeColor = currentScript.getAttribute('data-color') || '#D946EF';
@@ -35,21 +31,13 @@
     // 1b. Language resolution:
     // If in localStorage "langSelected" is nl -> Dutch, if en -> English, if nothing selected -> always English.
     function getActiveLang() {
-        // 1. Highest Priority: localStorage "langSelected"
+        // localStorage "langSelected" is the single source of truth:
+        // nl -> Dutch, en -> English, anything else / nothing selected -> always English.
         try {
             const stored = (localStorage.getItem('langSelected') || '').toLowerCase().trim().replace(/['"]/g, '');
             if (stored === 'nl' || stored.startsWith('nl')) return 'nl';
             if (stored === 'en' || stored.startsWith('en')) return 'en';
         } catch (e) {}
-
-        // 2. Fallback: data-lang attribute from script tag (if present)
-        try {
-            const attr = (currentScript && currentScript.getAttribute('data-lang') || '').toLowerCase().trim();
-            if (attr === 'nl' || attr.startsWith('nl')) return 'nl';
-            if (attr === 'en' || attr.startsWith('en')) return 'en';
-        } catch (e) {}
-
-        // 3. Default: always English
         return 'en';
     }
 
@@ -1303,6 +1291,19 @@
                 }
             });
         } catch (e) {}
+
+        // The "storage" event never fires in the document that wrote the value,
+        // so also poll for any langSelected change (host page, app, snippet, ...).
+        let lastStoredLang = null;
+        try { lastStoredLang = localStorage.getItem('langSelected'); } catch (e) {}
+        setInterval(function () {
+            let stored = null;
+            try { stored = localStorage.getItem('langSelected'); } catch (e) {}
+            if (stored !== lastStoredLang) {
+                lastStoredLang = stored;
+                refreshTranslations();
+            }
+        }, 400);
 
         // 5. Message rendering functions
         function appendMessage(sender, text, context = null) {
