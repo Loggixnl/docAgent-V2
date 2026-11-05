@@ -4,6 +4,7 @@ import time
 import math
 import hashlib
 import numpy as np
+import backend_i18n
 import config
 
 # Provider-specific helpers and imports
@@ -231,7 +232,7 @@ def get_embedding(text, api_key=None, provider=None):
 
 # High-Level Agent Behaviors
 
-def check_conversational_pleasantry(query):
+def check_conversational_pleasantry(query, lang="en"):
     """
     Check if a query is a conversational greeting, pleasantry, or question about the bot identity.
     Returns a standard friendly response if matched, or None if it's a substantive inquiry.
@@ -241,50 +242,45 @@ def check_conversational_pleasantry(query):
     q = query.strip().lower()
     q_clean = re.sub(r'[^\w\s]', '', q).strip()
 
-    # Common greetings
+    # Common greetings (EN + NL)
     greetings = {
         'hi', 'hello', 'hey', 'hiya', 'howdy', 'greetings', 'good morning',
-        'good afternoon', 'good evening', 'good day', 'yo', 'sup'
+        'good afternoon', 'good evening', 'good day', 'yo', 'sup',
+        'hallo', 'hoi', 'hey there', 'goedemorgen', 'goedemiddag',
+        'goedenavond', 'goedendag', 'goeiemorgen'
     }
     if q_clean in greetings:
-        return (
-            "Hello! I am **DocAgent AI**, your dedicated document knowledge base assistant. "
-            "I can answer questions based strictly on your uploaded documents.\n\n"
-            "Please ask any question about your uploaded documents, and I will be happy to find the answer for you."
-        )
+        return backend_i18n.msg(lang, "chat.greeting")
 
-    # Questions about bot identity or capabilities
+    # Questions about bot identity or capabilities (EN + NL)
     bot_identity_queries = [
         'who are you', 'what are you', 'what do you do', 'what can you do',
-        'how do you work', 'help', 'what is this'
+        'how do you work', 'help', 'what is this',
+        'wie ben je', 'wat ben je', 'wat kun je', 'wat kan je',
+        'hoe werk je', 'wat is dit'
     ]
     if any(q_clean == bi or q_clean.startswith(bi + ' ') for bi in bot_identity_queries):
-        return (
-            "I am **DocAgent AI**, a specialized Knowledge Base AI Assistant. "
-            "My role is to answer questions strictly and solely from the documents you upload.\n\n"
-            "I do not answer questions using external general knowledge. "
-            "Please upload documents and ask questions regarding their content."
-        )
+        return backend_i18n.msg(lang, "chat.identity")
 
-    # Gratitude
-    gratitude = {'thanks', 'thank you', 'thx', 'appreciate it', 'thank you so much', 'thanks a lot'}
+    # Gratitude (EN + NL)
+    gratitude = {
+        'thanks', 'thank you', 'thx', 'appreciate it', 'thank you so much', 'thanks a lot',
+        'bedankt', 'dank je', 'dankjewel', 'dank u wel', 'dank je wel'
+    }
     if q_clean in gratitude:
-        return (
-            "You're very welcome! If you have any further questions about your uploaded documents, "
-            "feel free to ask."
-        )
+        return backend_i18n.msg(lang, "chat.gratitude")
 
     return None
 
 
-def classify_question(query, api_key=None, model_name=None, provider=None, base_url=None):
+def classify_question(query, api_key=None, model_name=None, provider=None, base_url=None, lang="en"):
     """Classify whether a question is a pleasantry/meta query or document query."""
-    if check_conversational_pleasantry(query):
+    if check_conversational_pleasantry(query, lang=lang):
         return "general"
     return "document"
 
 
-def generate_answer(query, context_chunks, api_key=None, model_name=None, chat_history=None, provider=None, base_url=None):
+def generate_answer(query, context_chunks, api_key=None, model_name=None, chat_history=None, provider=None, base_url=None, lang="en"):
     """Generate an answer using retrieved chunks as context (strictly grounded document RAG)."""
     # Format retrieved context
     formatted_context = ""
@@ -292,6 +288,9 @@ def generate_answer(query, context_chunks, api_key=None, model_name=None, chat_h
         formatted_context += f"\n[Document: {chunk['filename']} | Chunk: {idx+1} | Match Score: {chunk['score']:.2f}]\n"
         formatted_context += f"{chunk['text']}\n"
         formatted_context += "-" * 40 + "\n"
+
+    decline_sentence = backend_i18n.msg(lang, "chat.decline")
+    language_rule = backend_i18n.msg(lang, "chat.language_rule")
 
     system_instruction = (
         "You are DocAgent AI, a specialized Knowledge Base AI Assistant. "
@@ -301,11 +300,12 @@ def generate_answer(query, context_chunks, api_key=None, model_name=None, chat_h
         "Do NOT use pre-trained general knowledge, outside facts, assumptions, or extrapolations.\n"
         "2. UNANSWERABLE QUESTIONS: If the retrieved context below does NOT contain the answer, "
         "or does not have sufficient information to answer the question, you MUST decline and reply EXACTLY with:\n"
-        "'I couldn\'t find anything for your query in the uploaded documents. You can raise your query to Administration/Support.'\n"
+        f"'{decline_sentence}'\n"
         "Under NO circumstances should you answer using outside general knowledge, write unrelated code, or provide information not in the documents.\n"
         "3. CITATION: Always cite the source document name (e.g. 'According to [filename]...') when referencing details.\n"
         "4. TONE & FORMAT: Provide clear, professional, structured answers using bullet points and bold text where appropriate.\n"
-        "5. ZERO HALLUCINATION: Never invent information, facts, URLs, numbers, or rules that are not explicitly present in the context."
+        "5. ZERO HALLUCINATION: Never invent information, facts, URLs, numbers, or rules that are not explicitly present in the context.\n"
+        f"6. {language_rule}"
     )
 
     prompt = f"""{system_instruction}
@@ -337,26 +337,25 @@ Here is the retrieved context from the uploaded documents:
         raise RuntimeError(f"LLM generation failed ({provider or 'default'}): {str(e)}")
 
 
-def generate_general_answer(query, api_key=None, model_name=None, chat_history=None, provider=None, base_url=None):
+def generate_general_answer(query, api_key=None, model_name=None, chat_history=None, provider=None, base_url=None, lang="en"):
     """
     Strict refusal for general/out-of-scope inquiries.
     Enforces that DocAgent AI only answers from uploaded documents.
     """
-    pleasantry = check_conversational_pleasantry(query)
+    pleasantry = check_conversational_pleasantry(query, lang=lang)
     if pleasantry:
         return pleasantry
 
-    return (
-        "I couldn't find a relevant answer to your query. "
-        "Please contact the Administration or Support team for further assistance."
-    )
+    return backend_i18n.msg(lang, "chat.refusal")
 
 
-def generate_session_title(query, api_key=None, model_name=None, provider=None, base_url=None):
+def generate_session_title(query, api_key=None, model_name=None, provider=None, base_url=None, lang="en"):
     """Generate a concise title for a chat session based on the first question."""
+    language_rule = backend_i18n.msg(lang, "chat.language_rule")
     prompt = (
         f"Generate a very short title (3-6 words max) for a conversation that starts with this question: '{query}'. "
-        "Return ONLY the title text, with no quotes, punctuation, or preamble."
+        "Return ONLY the title text, with no quotes, punctuation, or preamble. "
+        f"{language_rule}"
     )
 
     try:

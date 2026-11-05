@@ -7,6 +7,7 @@ import {
   deleteChatSession as apiDeleteChatSession 
 } from '../api/client'
 import { useAuth } from './useAuth'
+import i18n from '../i18n'
 
 const sessions = ref([])
 const activeSessionId = ref(null)
@@ -170,7 +171,7 @@ async function removeSession(sessionId) {
     }
   } catch (err) {
     console.error("Failed to delete session:", err)
-    alert(`Could not delete chat session: ${err.message}`)
+    alert(i18n.global.t('chat.deleteSessionError', { msg: err.message }))
   }
 }
 
@@ -217,7 +218,7 @@ async function sendMessage(query, { chatbotId, apiKey }) {
   } catch (err) {
     chatHistory.value.push({
       role: 'model',
-      text: `⚠️ **Error:** ${err.message || "An internal error occurred."}`,
+      text: `⚠️ ${i18n.global.t('chat.errorBubble', { msg: err.message || i18n.global.t('chat.genericError') })}`,
       context: [],
       timestamp: new Date().toISOString()
     })

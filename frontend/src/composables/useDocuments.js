@@ -6,6 +6,7 @@ import {
   deleteDocument,
   getDocumentAnalysis
 } from '../api/client'
+import i18n from '../i18n'
 
 const documents = ref([])
 const stats = reactive({
@@ -82,7 +83,7 @@ async function openAnalysis(doc) {
     const data = await getDocumentAnalysis(doc.id)
     analysisModal.content = data.analysis_report || ''
   } catch (e) {
-    analysisModal.content = '⚠️ Report could not be retrieved. ' + (e.message || '')
+    analysisModal.content = i18n.global.t('analysis.reportError') + ' ' + (e.message || '')
   } finally {
     analysisModal.isLoading = false
   }

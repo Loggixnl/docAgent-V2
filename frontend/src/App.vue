@@ -100,6 +100,42 @@
       :is-open="isWidgetModalOpen"
       @close="isWidgetModalOpen = false"
     />
+
+    <!-- EMAIL VERIFICATION RESULT OVERLAY -->
+    <div v-if="verifyResult" class="fixed inset-0 z-[100] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 text-center">
+        <template v-if="verifyResult.loading">
+          <i class="mdi mdi-loading mdi-spin text-4xl text-darkTeal"></i>
+          <p class="mt-4 text-sm font-semibold text-slate-600">{{ $t('verify.processing') }}</p>
+        </template>
+        <template v-else>
+          <div
+            class="w-16 h-16 rounded-full mx-auto flex items-center justify-center text-4xl"
+            :class="verifyResult.success ? 'bg-teal-50 text-teal-600' : 'bg-red-50 text-red-500'"
+          >
+            <i :class="verifyResult.success ? 'mdi mdi-email-check-outline' : 'mdi mdi-alert-circle-outline'"></i>
+          </div>
+          <h2 class="text-lg font-bold mt-4 text-slate-800">
+            {{ verifyResult.success ? $t('verify.successHeading') : $t('verify.failureHeading') }}
+          </h2>
+          <p class="text-sm text-slate-600 mt-2">{{ verifyResult.message }}</p>
+          <button
+            v-if="verifyResult.success"
+            class="mt-6 px-6 py-2.5 rounded-full bg-darkTeal text-white text-sm font-semibold hover:bg-opacity-90 transition"
+            @click="closeVerifyResult(true)"
+          >
+            {{ $t('verify.goToLogin') }}
+          </button>
+          <button
+            v-else
+            class="mt-6 px-6 py-2.5 rounded-full border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition"
+            @click="closeVerifyResult(false)"
+          >
+            {{ $t('common.close') }}
+          </button>
+        </template>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -126,6 +162,11 @@ import WidgetModal from './components/modals/WidgetModal.vue'
 import { useAuth } from './composables/useAuth'
 import { useDocuments } from './composables/useDocuments'
 import { useChat } from './composables/useChat'
+import { useI18n } from 'vue-i18n'
+import { setLang, getLang } from './composables/useLanguage'
+import { verifyEmail } from './api/client'
+
+const { t } = useI18n()
 
 const { 
   isAuthenticated, 
@@ -158,8 +199,10 @@ const chatInputRef = ref(null)
 const isSettingsModalOpen = ref(false)
 const isWidgetModalOpen = ref(false)
 const isMobileSidebarOpen = ref(false)
+const verifyResult = ref(null) // null | { loading: true } | { success, message }
 
 onMounted(async () => {
+  await handleVerificationLink()
   const hasSession = await checkSession()
   if (hasSession) {
     await Promise.all([
@@ -168,6 +211,36 @@ onMounted(async () => {
     ])
   }
 })
+
+// Handles /?verify_token=...&lang=... links from verification emails:
+// applies the link language, consumes the token via the API, and shows the result overlay.
+async function handleVerificationLink() {
+  const params = new URLSearchParams(window.location.search)
+  const token = params.get('verify_token')
+  if (!token) return
+
+  const vLang = params.get('lang')
+  if (vLang) setLang(vLang)
+
+  // Clean the URL immediately so a refresh does not re-consume the token
+  window.history.replaceState({}, document.title, window.location.pathname)
+
+  verifyResult.value = { loading: true }
+  try {
+    const data = await verifyEmail(token, getLang())
+    verifyResult.value = {
+      success: !!data.success,
+      message: data.message || t('verify.failed')
+    }
+  } catch (e) {
+    verifyResult.value = { success: false, message: t('verify.failed') }
+  }
+}
+
+function closeVerifyResult(openLogin) {
+  verifyResult.value = null
+  if (openLogin) openAuthModal('login')
+}
 
 async function handleAuthSuccess() {
   await Promise.all([
@@ -195,7 +268,7 @@ function handleNewChat() {
 }
 
 function handleFirstUpload(filename) {
-  addAgentMessage(`I have successfully parsed, vectorized, and compiled an initial summary report for **${filename}**. I am now ready to answer any detailed policy questions about it! 📑`)
+  addAgentMessage(t('app.uploadBotMessage', { filename }))
 }
 
 function handleViewAnalysis(doc) {

@@ -374,6 +374,8 @@
 
 // Central API client service with authorization token management
 
+import { getStoredLang } from '../i18n/storage'
+
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || '')
   .replace(/\/+$/, '');
 
@@ -429,7 +431,7 @@ export async function loginUser(email, password) {
   const res = await fetch(apiUrl('/api/auth/login'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password })
+    body: JSON.stringify({ email, password, lang: getStoredLang() })
   });
 
   if (!res.ok) {
@@ -450,7 +452,8 @@ export async function registerUser(firstName, email, password, confirmPassword) 
       first_name: firstName,
       email,
       password,
-      confirm_password: confirmPassword
+      confirm_password: confirmPassword,
+      lang: getStoredLang()
     })
   });
 
@@ -466,7 +469,7 @@ export async function resendVerification(email) {
   const res = await fetch(apiUrl('/api/auth/resend-verification'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password: '' })
+    body: JSON.stringify({ email, password: '', lang: getStoredLang() })
   });
 
   if (!res.ok) {
@@ -475,6 +478,16 @@ export async function resendVerification(email) {
   }
 
   return res.json();
+}
+
+// Consume an email-verification link token. Returns { success, message } regardless of
+// HTTP status (400 carries the localized failure message, not an exception).
+export async function verifyEmail(token, lang = getStoredLang()) {
+  const res = await fetch(
+    apiUrl(`/api/auth/verify-email?token=${encodeURIComponent(token)}&lang=${encodeURIComponent(lang)}`),
+    { headers: { 'Accept': 'application/json' } }
+  );
+  return res.json().catch(() => ({ success: false, message: '' }));
 }
 
 export async function getMe() {
@@ -711,7 +724,8 @@ export async function sendChatMessage({
       chatbot_id: chatbotId,
       session_id: sessionId || null,
       save_session: saveSession,
-      base_url: baseUrl
+      base_url: baseUrl,
+      lang: getStoredLang()
     })
   });
 
@@ -815,7 +829,7 @@ export async function submitWidgetInquiry(data) {
   const res = await fetch(apiUrl('/api/widget/inquiry'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
+    body: JSON.stringify({ lang: getStoredLang(), ...data })
   });
 
   if (!res.ok) {

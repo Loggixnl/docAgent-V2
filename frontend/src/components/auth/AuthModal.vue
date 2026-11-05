@@ -1,13 +1,13 @@
 <template>
-  <div 
+  <div
     v-if="isOpen"
     class="fixed inset-0 z-50 bg-[#0F1424]/40 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto"
     @click.self="close"
   >
     <div class="w-full max-w-4xl bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-2xl flex flex-col md:grid md:grid-cols-2 relative">
-      <button 
+      <button
         class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 text-2xl transition-all cursor-pointer z-50 w-8 h-8 flex items-center justify-center bg-slate-100 rounded-full hover:bg-slate-200"
-        title="Close Modal"
+        :title="$t('auth.closeTitle')"
         @click="close"
       >
         &times;
@@ -15,22 +15,25 @@
 
       <!-- Left Panel: Branding & Features -->
       <div class="p-8 md:p-12 bg-gradient-to-br from-lightTeal/20 to-bgBase/40 border-r border-gray-200/80 flex flex-col justify-between">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white bg-gradient-to-br from-lightTeal to-darkTeal shadow-md text-xl shrink-0">
-            <i class="mdi mdi-shield-text-outline"></i>
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white bg-gradient-to-br from-lightTeal to-darkTeal shadow-md text-xl shrink-0">
+              <i class="mdi mdi-shield-text-outline"></i>
+            </div>
+            <div>
+              <h2 class="text-base font-black font-heading text-slate-900 tracking-tight leading-none">{{ $t('brand') }}</h2>
+              <span class="text-[9px] text-darkTeal font-bold uppercase tracking-wider block mt-0.5">{{ $t('auth.brandTagline') }}</span>
+            </div>
           </div>
-          <div>
-            <h2 class="text-base font-black font-heading text-slate-900 tracking-tight leading-none">DocAgent AI</h2>
-            <span class="text-[9px] text-darkTeal font-bold uppercase tracking-wider block mt-0.5">AI SaaS Chatbot Platform</span>
-          </div>
+          <LanguageSwitcher />
         </div>
 
         <div class="my-8 md:my-12">
           <h3 class="text-2xl md:text-3xl font-extrabold font-heading text-slate-900 leading-tight mb-4">
-            Launch your custom <span class="text-darkTeal">AI Chatbot</span> in minutes.
+            {{ $t('auth.brandHeadlineBefore') }} <span class="text-darkTeal">{{ $t('auth.brandHeadlineHighlight') }}</span> {{ $t('auth.brandHeadlineAfter') }}
           </h3>
           <p class="text-xs text-slate-600 leading-relaxed mb-6 font-medium">
-            Upload your company documents, train your custom agent, and integrate it into your internal portals or public websites with ease.
+            {{ $t('auth.brandBody') }}
           </p>
 
           <div class="space-y-6">
@@ -39,8 +42,8 @@
                 <i class="mdi mdi-account-key-outline"></i>
               </div>
               <div>
-                <h4 class="text-xs font-bold text-slate-900">Unique Chatbot ID</h4>
-                <p class="text-[10px] text-slate-500 mt-0.5 font-medium">Every account gets its own isolated knowledge base and widget integration.</p>
+                <h4 class="text-xs font-bold text-slate-900">{{ $t('auth.bullet1Title') }}</h4>
+                <p class="text-[10px] text-slate-500 mt-0.5 font-medium">{{ $t('auth.bullet1Body') }}</p>
               </div>
             </div>
             <div class="flex gap-4">
@@ -48,8 +51,8 @@
                 <i class="mdi mdi-cloud-upload-outline"></i>
               </div>
               <div>
-                <h4 class="text-xs font-bold text-slate-900">Document Indexer</h4>
-                <p class="text-[10px] text-slate-500 mt-0.5 font-medium">Upload PDF, Markdown, and TXT. Retrieve answers directly from the source.</p>
+                <h4 class="text-xs font-bold text-slate-900">{{ $t('auth.bullet2Title') }}</h4>
+                <p class="text-[10px] text-slate-500 mt-0.5 font-medium">{{ $t('auth.bullet2Body') }}</p>
               </div>
             </div>
             <div class="flex gap-4">
@@ -57,15 +60,15 @@
                 <i class="mdi mdi-code-tags"></i>
               </div>
               <div>
-                <h4 class="text-xs font-bold text-slate-900">Zero-Code Embed</h4>
-                <p class="text-[10px] text-slate-500 mt-0.5 font-medium">Copy-paste a single script tag to integrate the chatbot anywhere.</p>
+                <h4 class="text-xs font-bold text-slate-900">{{ $t('auth.bullet3Title') }}</h4>
+                <p class="text-[10px] text-slate-500 mt-0.5 font-medium">{{ $t('auth.bullet3Body') }}</p>
               </div>
             </div>
           </div>
         </div>
-        
+
         <div class="text-[10px] text-slate-400 font-semibold">
-          Secure workspace powered by advanced AI models.
+          {{ $t('auth.secureNote') }}
         </div>
       </div>
 
@@ -77,14 +80,13 @@
             <div class="w-16 h-16 rounded-full bg-lightTeal/20 text-darkTeal flex items-center justify-center text-4xl mx-auto mb-5">
               <i class="mdi mdi-email-check-outline"></i>
             </div>
-            <h3 class="text-xl font-bold text-slate-900 font-heading mb-2">Check your email</h3>
+            <h3 class="text-xl font-bold text-slate-900 font-heading mb-2">{{ $t('auth.checkEmail') }}</h3>
             <p class="text-xs text-slate-600 leading-relaxed font-medium mb-2">
-              We've sent a verification link to
+              {{ $t('auth.sentTo') }}
             </p>
             <p class="text-sm font-bold text-darkTeal mb-4">{{ pendingEmail }}</p>
             <p class="text-xs text-slate-500 font-medium mb-6">
-              Click the link in the email to activate your account, then log in here.
-              The link expires in 24 hours.
+              {{ $t('auth.verifyHint') }}
             </p>
 
             <div v-if="resendMessage" class="p-2.5 rounded-xl bg-green-50 border border-green-200 text-green-700 text-xs font-medium mb-4">
@@ -101,7 +103,7 @@
               @click="handleResend"
             >
               <i v-if="resendLoading" class="mdi mdi-loading mdi-spin"></i>
-              {{ resendLoading ? 'Sending...' : 'Resend verification email' }}
+              {{ resendLoading ? $t('auth.sending') : $t('auth.resendBtn') }}
             </button>
 
             <div class="text-xs text-slate-600">
@@ -110,7 +112,7 @@
                 class="text-darkTeal hover:underline font-bold cursor-pointer"
                 @click="backToLogin"
               >
-                Back to login
+                {{ $t('auth.backToLogin') }}
               </button>
             </div>
           </div>
@@ -118,10 +120,10 @@
           <template v-else>
           <div class="mb-6">
             <h3 class="text-xl font-bold text-slate-900 font-heading">
-              {{ isRegister ? "Create an account." : "Let's start a conversation." }}
+              {{ isRegister ? $t('auth.createHeading') : $t('auth.loginHeading') }}
             </h3>
             <p class="text-xs text-slate-500 mt-1 font-medium">
-              {{ isRegister ? "Sign up below to launch your own custom AI chatbot." : "Enter your details below to log in to your dashboard." }}
+              {{ isRegister ? $t('auth.registerSubtitle') : $t('auth.loginSubtitle') }}
             </p>
           </div>
 
@@ -136,7 +138,7 @@
                 @click="handleResendFromLogin"
               >
                 <i v-if="resendLoading" class="mdi mdi-loading mdi-spin"></i>
-                {{ resendLoading ? 'Sending...' : 'Resend verification email' }}
+                {{ resendLoading ? $t('auth.sending') : $t('auth.resendBtn') }}
               </button>
             </div>
 
@@ -145,80 +147,80 @@
             </div>
 
             <div v-if="isRegister" class="flex flex-col gap-1.5">
-              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">First Name</label>
+              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{{ $t('auth.firstName') }}</label>
               <div class="relative flex items-center">
                 <i class="mdi mdi-account-outline absolute left-4 text-darkTeal text-base"></i>
-                <input 
-                  v-model="firstName" 
-                  type="text" 
-                  placeholder="John" 
-                  class="w-full bg-white border border-gray-300 focus:border-darkTeal focus:ring-1 focus:ring-darkTeal/20 outline-none rounded-xl py-2.5 pl-11 pr-4 text-xs text-slate-900 placeholder-gray-400 transition-all font-medium" 
+                <input
+                  v-model="firstName"
+                  type="text"
+                  :placeholder="$t('auth.firstNamePlaceholder')"
+                  class="w-full bg-white border border-gray-300 focus:border-darkTeal focus:ring-1 focus:ring-darkTeal/20 outline-none rounded-xl py-2.5 pl-11 pr-4 text-xs text-slate-900 placeholder-gray-400 transition-all font-medium"
                   :required="isRegister"
                 >
               </div>
             </div>
 
             <div class="flex flex-col gap-1.5">
-              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Email Address</label>
+              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{{ $t('auth.emailLabel') }}</label>
               <div class="relative flex items-center">
                 <i class="mdi mdi-email-outline absolute left-4 text-darkTeal text-base"></i>
-                <input 
-                  v-model="email" 
-                  type="email" 
-                  placeholder="you@example.com" 
-                  class="w-full bg-white border border-gray-300 focus:border-darkTeal focus:ring-1 focus:ring-darkTeal/20 outline-none rounded-xl py-2.5 pl-11 pr-4 text-xs text-slate-900 placeholder-gray-400 transition-all font-medium" 
+                <input
+                  v-model="email"
+                  type="email"
+                  :placeholder="$t('auth.emailPlaceholder')"
+                  class="w-full bg-white border border-gray-300 focus:border-darkTeal focus:ring-1 focus:ring-darkTeal/20 outline-none rounded-xl py-2.5 pl-11 pr-4 text-xs text-slate-900 placeholder-gray-400 transition-all font-medium"
                   required
                 >
               </div>
             </div>
 
             <div class="flex flex-col gap-1.5">
-              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Password</label>
+              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{{ $t('auth.password') }}</label>
               <div class="relative flex items-center">
                 <i class="mdi mdi-lock-outline absolute left-4 text-darkTeal text-base"></i>
-                <input 
-                  v-model="password" 
-                  type="password" 
-                  placeholder="••••••••" 
-                  class="w-full bg-white border border-gray-300 focus:border-darkTeal focus:ring-1 focus:ring-darkTeal/20 outline-none rounded-xl py-2.5 pl-11 pr-4 text-xs text-slate-900 placeholder-gray-400 transition-all font-medium" 
+                <input
+                  v-model="password"
+                  type="password"
+                  placeholder="••••••••"
+                  class="w-full bg-white border border-gray-300 focus:border-darkTeal focus:ring-1 focus:ring-darkTeal/20 outline-none rounded-xl py-2.5 pl-11 pr-4 text-xs text-slate-900 placeholder-gray-400 transition-all font-medium"
                   required
                 >
               </div>
             </div>
 
             <div v-if="isRegister" class="flex flex-col gap-1.5">
-              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Confirm Password</label>
+              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{{ $t('auth.confirmPassword') }}</label>
               <div class="relative flex items-center">
                 <i class="mdi mdi-lock-check-outline absolute left-4 text-darkTeal text-base"></i>
-                <input 
-                  v-model="confirmPassword" 
-                  type="password" 
-                  placeholder="••••••••" 
-                  class="w-full bg-white border border-gray-300 focus:border-darkTeal focus:ring-1 focus:ring-darkTeal/20 outline-none rounded-xl py-2.5 pl-11 pr-4 text-xs text-slate-900 placeholder-gray-400 transition-all font-medium" 
+                <input
+                  v-model="confirmPassword"
+                  type="password"
+                  placeholder="••••••••"
+                  class="w-full bg-white border border-gray-300 focus:border-darkTeal focus:ring-1 focus:ring-darkTeal/20 outline-none rounded-xl py-2.5 pl-11 pr-4 text-xs text-slate-900 placeholder-gray-400 transition-all font-medium"
                   :required="isRegister"
                 >
               </div>
             </div>
 
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               :disabled="loading"
               class="w-full py-3 rounded-full bg-darkTeal text-white font-bold text-xs shadow-md shadow-darkTeal/20 hover:bg-darkTeal/90 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 mt-6 cursor-pointer disabled:opacity-50"
             >
               <i v-if="loading" class="mdi mdi-loading mdi-spin"></i>
-              <span>{{ loading ? "Processing..." : (isRegister ? "Create Account" : "Login to Dashboard") }}</span>
+              <span>{{ loading ? $t('auth.processing') : (isRegister ? $t('auth.submitRegister') : $t('auth.submitLogin')) }}</span>
               <i v-if="!loading" class="mdi mdi-arrow-right text-xs"></i>
             </button>
           </form>
 
           <div class="mt-6 text-center text-xs text-slate-600">
-            <span>{{ isRegister ? "Already have an account?" : "Don't have an account?" }}</span>
-            <button 
-              type="button" 
+            <span>{{ isRegister ? $t('auth.haveAccount') : $t('auth.noAccount') }}</span>
+            <button
+              type="button"
               class="text-darkTeal hover:underline ml-1 font-bold cursor-pointer"
               @click="toggleMode"
             >
-              {{ isRegister ? "Log in here" : "Create an account" }}
+              {{ isRegister ? $t('auth.loginLink') : $t('auth.registerLink') }}
             </button>
           </div>
           </template>
@@ -231,6 +233,10 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useAuth } from '../../composables/useAuth'
+import { useI18n } from 'vue-i18n'
+import LanguageSwitcher from '../common/LanguageSwitcher.vue'
+
+const { t } = useI18n()
 
 const props = defineProps({
   isOpen: Boolean,
@@ -289,21 +295,21 @@ async function handleSubmit() {
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (!emailRegex.test(trimmedEmail)) {
-    errorMessage.value = 'Please enter a valid email address.'
+    errorMessage.value = t('auth.errInvalidEmail')
     return
   }
 
   if (isRegister.value) {
     if (!firstName.value.trim()) {
-      errorMessage.value = 'Please enter your first name.'
+      errorMessage.value = t('auth.errFirstName')
       return
     }
     if (password.value !== confirmPassword.value) {
-      errorMessage.value = 'Passwords do not match!'
+      errorMessage.value = t('auth.errMismatch')
       return
     }
     if (password.value.length < 4) {
-      errorMessage.value = 'Password must be at least 4 characters long.'
+      errorMessage.value = t('auth.errPasswordShort')
       return
     }
   }
@@ -320,7 +326,7 @@ async function handleSubmit() {
       emit('success')
     }
   } catch (err) {
-    errorMessage.value = err.message || 'Authentication failed. Check your inputs.'
+    errorMessage.value = err.message || t('auth.errAuthFailed')
     // 403 from the login endpoint means the email is not verified yet
     if (err.status === 403) {
       showResendOnLoginError.value = true
@@ -336,9 +342,9 @@ async function handleResend() {
   resendLoading.value = true
   try {
     const data = await resendVerification(pendingEmail.value)
-    resendMessage.value = data.message || 'Verification email sent.'
+    resendMessage.value = data.message || t('auth.resendSuccess')
   } catch (err) {
-    errorMessage.value = err.message || 'Failed to resend verification email.'
+    errorMessage.value = err.message || t('auth.errResendFailed')
   } finally {
     resendLoading.value = false
   }
@@ -350,9 +356,9 @@ async function handleResendFromLogin() {
   resendLoading.value = true
   try {
     const data = await resendVerification(email.value.trim().toLowerCase())
-    resendMessage.value = data.message || 'Verification email sent.'
+    resendMessage.value = data.message || t('auth.resendSuccess')
   } catch (err) {
-    errorMessage.value = err.message || 'Failed to resend verification email.'
+    errorMessage.value = err.message || t('auth.errResendFailed')
   } finally {
     resendLoading.value = false
   }

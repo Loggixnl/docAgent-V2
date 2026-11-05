@@ -1,11 +1,11 @@
 <template>
   <footer class="py-2.5 sm:py-4 px-3 sm:px-6 border-t border-gray-200 bg-slate-50/50 shrink-0">
     <div class="flex items-center gap-2 sm:gap-3 bg-white border border-gray-300 rounded-2xl p-1.5 sm:p-2 focus-within:border-darkTeal/80 focus-within:ring-1 focus-within:ring-darkTeal/20 transition-all shadow-sm">
-      <textarea 
+      <textarea
         ref="textareaRef"
         v-model="inputText"
-        placeholder="Ask a question about uploaded documents..." 
-        rows="1" 
+        :placeholder="$t('input.placeholder')"
+        rows="1"
         class="flex-grow bg-transparent border-none outline-none text-xs text-slate-900 placeholder-gray-400 resize-none max-h-24 py-1 sm:py-1.5 pl-2 sm:pl-3 font-medium"
         @input="handleInput"
         @keydown="handleKeydown"
@@ -21,7 +21,7 @@
     </div>
     
     <div class="flex items-center gap-1.5 text-[8px] sm:text-[9px] text-slate-400 font-semibold mt-2 ml-1">
-      <i class="mdi mdi-information-outline text-darkTeal"></i> Relying strictly on uploaded document sources for answers.
+      <i class="mdi mdi-information-outline text-darkTeal"></i> {{ $t('input.footnote') }}
     </div>
   </footer>
 </template>

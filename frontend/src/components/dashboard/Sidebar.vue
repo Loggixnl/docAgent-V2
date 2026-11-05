@@ -9,15 +9,15 @@
             <i class="mdi mdi-shield-text-outline"></i>
           </div>
           <div class="min-w-0">
-            <h2 class="text-sm font-black font-heading text-slate-900 tracking-tight leading-none truncate">DocAgent AI</h2>
-            <span class="text-[9px] text-darkTeal font-bold uppercase tracking-wider block mt-0.5 truncate">HR & Policy Assistant</span>
+            <h2 class="text-sm font-black font-heading text-slate-900 tracking-tight leading-none truncate">{{ $t('brand') }}</h2>
+            <span class="text-[9px] text-darkTeal font-bold uppercase tracking-wider block mt-0.5 truncate">{{ $t('sidebar.subtitle') }}</span>
           </div>
         </div>
-        
+
         <!-- Mobile Drawer Close Button -->
-        <button 
+        <button
           class="lg:hidden w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
-          title="Close sidebar"
+          :title="$t('sidebar.closeSidebar')"
           @click="$emit('closeMobile')"
         >
           <i class="mdi mdi-close text-lg"></i>
@@ -25,12 +25,12 @@
       </div>
 
       <!-- New Chat Action Button -->
-      <button 
+      <button
         class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-lightTeal to-darkTeal hover:from-darkTeal hover:to-lightTeal text-white font-bold text-xs shadow-sm hover:shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer transform active:scale-[0.98]"
         @click="handleNewChat"
       >
         <i class="mdi mdi-plus-circle-outline text-base"></i>
-        <span>New Chat</span>
+        <span>{{ $t('common.newChat') }}</span>
       </button>
     </div>
 
@@ -38,7 +38,7 @@
     <div class="flex-1 flex flex-col min-h-0 my-3">
       <!-- Drag & Drop Uploader -->
       <div class="mb-3 shrink-0">
-        <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 font-heading">Upload Documents</h3>
+        <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 font-heading">{{ $t('sidebar.uploadDocs') }}</h3>
         <div 
           class="border-2 border-dashed border-gray-300 hover:border-darkTeal/60 rounded-xl p-3 text-center cursor-pointer transition-all flex flex-col items-center gap-1 bg-slate-50/50"
           :class="{ 'dropzone-hover': isDragOver }"
@@ -55,8 +55,8 @@
             @change="handleFileSelected"
           >
           <i class="mdi mdi-cloud-upload-outline text-xl text-darkTeal animate-pulse"></i>
-          <p class="text-xs font-bold text-slate-700">Drag & drop or <span class="text-darkTeal hover:underline font-bold">browse</span></p>
-          <span class="text-[9px] text-slate-500 font-medium">PDF, MD, TXT, DOCX (Max 10MB)</span>
+          <p class="text-xs font-bold text-slate-700" v-html="$t('sidebar.dragDrop')"></p>
+          <span class="text-[9px] text-slate-500 font-medium">{{ $t('sidebar.formats') }}</span>
         </div>
 
         <!-- Upload Progress Container -->
@@ -75,7 +75,7 @@
       </div>
 
       <div class="flex items-center justify-between mb-2 shrink-0">
-        <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-heading">Indexed Policy Files</h3>
+        <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-heading">{{ $t('sidebar.indexedFiles') }}</h3>
         <span class="px-2 py-0.5 rounded-full bg-lightTeal/15 text-darkTeal text-[10px] font-extrabold">
           {{ documents.length }}
         </span>
@@ -88,7 +88,7 @@
           class="h-full min-h-[100px] flex flex-col items-center justify-center py-6 text-slate-400 gap-1.5 border border-dashed border-gray-200 rounded-xl bg-slate-50/30"
         >
           <i class="mdi mdi-file-question-outline text-2xl text-slate-300"></i>
-          <p class="text-[10px] font-semibold text-slate-500">No documents uploaded yet</p>
+          <p class="text-[10px] font-semibold text-slate-500">{{ $t('sidebar.noDocs') }}</p>
         </div>
 
         <div 
@@ -107,7 +107,7 @@
               <div class="text-[9px] text-slate-500 flex items-center gap-1.5 mt-0.5 font-semibold">
                 <span>{{ formatFileSize(doc.file_size) }}</span>
                 <span>•</span>
-                <span>{{ doc.chunk_count }} chunks</span>
+                <span>{{ $t('sidebar.chunksCount', { n: doc.chunk_count }) }}</span>
               </div>
             </div>
           </div>
@@ -118,17 +118,17 @@
               class="flex-grow py-1 px-2.5 rounded-full bg-white border border-slate-200 hover:border-slate-400 text-[9px] font-bold text-slate-700 hover:text-slate-900 hover:bg-slate-50 flex items-center justify-center gap-1 transition-all duration-200 cursor-pointer"
               @click="$emit('viewAnalysis', doc)"
             >
-              <i class="mdi mdi-text-box-search-outline text-darkTeal text-xs"></i> Analysis
+              <i class="mdi mdi-text-box-search-outline text-darkTeal text-xs"></i> {{ $t('sidebar.analysis') }}
             </button>
 
-            <button 
+            <button
               class="py-1 px-2 rounded-full bg-white border border-slate-200 hover:border-coralOrange/50 hover:bg-coralOrange/5 hover:text-coralOrange text-[9px] font-bold text-slate-500 flex items-center justify-center gap-1 transition-all duration-200 cursor-pointer"
               :class="doc.has_analysis ? 'w-7 shrink-0' : 'flex-grow'"
-              title="Delete Document"
+              :title="$t('sidebar.deleteDoc')"
               @click="confirmDeleteDoc(doc.id)"
             >
-              <i class="mdi mdi-delete-outline text-xs"></i> 
-              <span v-if="!doc.has_analysis">Remove</span>
+              <i class="mdi mdi-delete-outline text-xs"></i>
+              <span v-if="!doc.has_analysis">{{ $t('sidebar.remove') }}</span>
             </button>
           </div>
         </div>
@@ -143,7 +143,7 @@
         :class="isDashboardView 
           ? 'bg-darkTeal border-darkTeal text-white hover:bg-darkTeal/90' 
           : 'border-darkTeal/30 bg-lightTeal/10 hover:bg-lightTeal/20 text-darkTeal'"
-        :title="isDashboardView ? 'Back to Chat Assistant' : 'Open Admin Question Management Dashboard'"
+        :title="isDashboardView ? $t('sidebar.backToChatAssistant') : $t('sidebar.openAdmin')"
         @click="$emit('toggleDashboard')"
       >
         <div class="flex items-center gap-2">
@@ -151,7 +151,7 @@
             <i :class="isDashboardView ? 'mdi mdi-chat-outline' : 'mdi mdi-view-dashboard-outline'"></i>
           </div>
           <span class="font-bold" :class="isDashboardView ? 'text-white' : 'text-slate-900 group-hover:text-darkTeal'">
-            {{ isDashboardView ? 'Back to Chat' : 'Admin Dashboard' }}
+            {{ isDashboardView ? $t('header.backToChat') : $t('sidebar.adminDashboard') }}
           </span>
         </div>
         <i class="mdi text-sm transition-transform" :class="isDashboardView ? 'mdi-arrow-left group-hover:-translate-x-0.5' : 'mdi-arrow-right group-hover:translate-x-0.5'"></i>
@@ -160,11 +160,11 @@
       <!-- System Analytics Grid -->
       <div class="grid grid-cols-2 gap-2">
         <div class="bg-slate-50 border border-gray-100 rounded-xl p-2">
-          <span class="text-[8px] text-slate-500 uppercase font-bold tracking-wider block mb-0.5">Chunks</span>
+          <span class="text-[8px] text-slate-500 uppercase font-bold tracking-wider block mb-0.5">{{ $t('sidebar.chunksStat') }}</span>
           <span class="text-xs font-bold text-slate-900">{{ stats.chunk_count.toLocaleString() }}</span>
         </div>
         <div class="bg-slate-50 border border-gray-100 rounded-xl p-2">
-          <span class="text-[8px] text-slate-500 uppercase font-bold tracking-wider block mb-0.5">DB Size</span>
+          <span class="text-[8px] text-slate-500 uppercase font-bold tracking-wider block mb-0.5">{{ $t('sidebar.dbSize') }}</span>
           <span class="text-xs font-bold text-slate-900">{{ formattedDbSize }}</span>
         </div>
       </div>
@@ -174,8 +174,11 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useDocuments } from '../../composables/useDocuments'
 import { useAuth } from '../../composables/useAuth'
+
+const { t } = useI18n()
 
 const emit = defineEmits(['viewAnalysis', 'firstUploadComplete', 'openSettings', 'closeMobile', 'toggleDashboard', 'newChat'])
 
@@ -240,16 +243,16 @@ async function processUpload(file) {
       emit('firstUploadComplete', file.name)
     }
   } catch (err) {
-    alert(`Upload Error: ${err.message}`)
+    alert(t('sidebar.uploadError', { msg: err.message }))
   }
 }
 
 async function confirmDeleteDoc(docId) {
-  if (confirm("Are you sure you want to delete this document? All embedded search chunks will be permanently removed.")) {
+  if (confirm(t('sidebar.confirmDeleteDoc'))) {
     try {
       await removeDoc(docId)
     } catch (err) {
-      alert(`Error: ${err.message}`)
+      alert(t('common.error', { msg: err.message }))
     }
   }
 }

@@ -35,10 +35,18 @@ DATABASE_URL = (
 )
 DB_PATH = os.getenv("DB_PATH", os.path.join(DATA_DIR, "vector_store.db"))
 
-# App base URL (used to build email verification links — must be the BACKEND URL)
+# App base URL (backend origin — used for API callbacks that must stay on the backend)
 APP_BASE_URL = os.getenv("APP_BASE_URL", "http://localhost:8000").strip().rstrip("/")
-# Frontend URL (used for the post-verification "Go to Login" link)
-APP_FRONTEND_URL = os.getenv("APP_FRONTEND_URL", "").strip().rstrip("/") or APP_BASE_URL
+# Frontend URL used to build verification email links:
+#   <FRONTEND>/api/auth/verify-email?token=...&lang=...
+# Falls back to the production frontend when APP_BASE_URL is the known
+# production backend but APP_FRONTEND_URL is unset; otherwise to APP_BASE_URL.
+_PRODUCTION_BACKEND_URL = "https://docagent-v2-production.up.railway.app"
+_PRODUCTION_FRONTEND_URL = "https://docagent-v2-frontend-production.up.railway.app"
+APP_FRONTEND_URL = (
+    os.getenv("APP_FRONTEND_URL", "").strip().rstrip("/")
+    or (_PRODUCTION_FRONTEND_URL if APP_BASE_URL == _PRODUCTION_BACKEND_URL else APP_BASE_URL)
+)
 
 # SMTP configuration for outgoing email (verification, etc.)
 SMTP_HOST = os.getenv("SMTP_HOST", "").strip()
@@ -57,6 +65,21 @@ SENDGRID_TEMPLATE_ID = os.getenv("SENDGRID_TEMPLATE_ID", "").strip()
 SENDGRID_FROM_EMAIL = os.getenv("SENDGRID_FROM_EMAIL", "noreply@docagent.ai").strip()
 SENDGRID_FROM_NAME = os.getenv("SENDGRID_FROM_NAME", SMTP_FROM_NAME).strip()
 SENDGRID_SUBJECT = os.getenv("SENDGRID_SUBJECT", "Account validation").strip()
+# Dutch (nl) dynamic template. When empty, nl falls back to SENDGRID_TEMPLATE_ID.
+SENDGRID_TEMPLATE_ID_NL = os.getenv("SENDGRID_TEMPLATE_ID_NL", "").strip()
+SENDGRID_SUBJECT_NL = os.getenv("SENDGRID_SUBJECT_NL", "Account validering").strip()
+
+# Supported UI languages (en = English, nl = Dutch)
+SUPPORTED_LANGS = ("en", "nl")
+DEFAULT_LANG = "en"
+
+def normalize_lang(lang) -> str:
+    """Return a supported language code, falling back to the default."""
+    try:
+        code = (lang or "").strip().lower()
+    except Exception:
+        code = ""
+    return code if code in SUPPORTED_LANGS else DEFAULT_LANG
 
 # CORS configuration
 # Explicit allowed origins (comma-separated). Defaults cover the production

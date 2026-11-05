@@ -6,42 +6,37 @@ from email.mime.text import MIMEText
 
 import requests
 
+import backend_i18n
 import config
 
 SENDGRID_MESSAGES_URL = "https://api.sendgrid.com/v3/mail/send"
 
 
-def _build_verification_email(email: str, verify_url: str) -> MIMEMultipart:
+def _build_verification_email(email: str, verify_url: str, lang: str = "en") -> MIMEMultipart:
+    lang = backend_i18n.normalize_lang(lang)
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = "Verify your email - DocAgent AI"
+    msg["Subject"] = backend_i18n.msg(lang, "email.subject")
     msg["From"] = f"{config.SMTP_FROM_NAME} <{config.SMTP_FROM_EMAIL}>"
     msg["To"] = email
 
-    text_body = (
-        f"Welcome to DocAgent AI!\n\n"
-        f"Please verify your email address by opening the link below:\n\n"
-        f"{verify_url}\n\n"
-        f"This link expires in 24 hours. If you did not create an account, "
-        f"you can safely ignore this email.\n"
-    )
+    text_body = backend_i18n.msg(lang, "email.text", url=verify_url)
 
     html_body = f"""
     <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 32px; background: #f8fafc; border-radius: 12px;">
-      <h2 style="color: #0f172a; margin-top: 0;">Verify your email</h2>
+      <h2 style="color: #0f172a; margin-top: 0;">{backend_i18n.msg(lang, "email.heading")}</h2>
       <p style="color: #475569; font-size: 14px; line-height: 1.6;">
-        Welcome to <strong>DocAgent AI</strong>! Please confirm your email address to activate your account.
+        {backend_i18n.msg(lang, "email.welcome_html")}
       </p>
       <div style="text-align: center; margin: 28px 0;">
         <a href="{verify_url}"
            style="background: #0d9488; color: #ffffff; padding: 12px 28px; border-radius: 999px; text-decoration: none; font-weight: bold; font-size: 14px; display: inline-block;">
-          Verify Email Address
+          {backend_i18n.msg(lang, "email.button")}
         </a>
       </div>
       <p style="color: #94a3b8; font-size: 12px; line-height: 1.6;">
-        This link expires in <strong>24 hours</strong>. If the button doesn't work, copy and paste this link into your browser:<br>
-        <span style="color: #0d9488;">{verify_url}</span>
+        {backend_i18n.msg(lang, "email.expiry_html", url=verify_url)}
       </p>
-      <p style="color: #94a3b8; font-size: 12px;">If you did not create an account, you can safely ignore this email.</p>
+      <p style="color: #94a3b8; font-size: 12px;">{backend_i18n.msg(lang, "email.ignore_html")}</p>
     </div>
     """
 
@@ -50,8 +45,21 @@ def _build_verification_email(email: str, verify_url: str) -> MIMEMultipart:
     return msg
 
 
-def _send_via_sendgrid(email: str, first_name: str, confirmation_url: str) -> bool:
+def _send_via_sendgrid(email: str, first_name: str, confirmation_url: str, lang: str = "en") -> bool:
     """Send the verification email through the SendGrid v3 API using a dynamic template."""
+    lang = backend_i18n.normalize_lang(lang)
+    template_id = config.SENDGRID_TEMPLATE_ID
+    subject = config.SENDGRID_SUBJECT
+    if lang == "nl":
+        if config.SENDGRID_TEMPLATE_ID_NL:
+            template_id = config.SENDGRID_TEMPLATE_ID_NL
+            subject = config.SENDGRID_SUBJECT_NL or subject
+        else:
+            print(
+                "[EmailService] SENDGRID_TEMPLATE_ID_NL is not set — "
+                f"falling back to the English template for {email}"
+            )
+
     headers = {
         "Authorization": f"Bearer {config.SENDGRID_API_KEY}",
         "Content-Type": "application/json",
@@ -71,7 +79,8 @@ def _send_via_sendgrid(email: str, first_name: str, confirmation_url: str) -> bo
                     "confirmation_url": confirmation_url,
                     "expiry_hours": 24,
                     "year": datetime.now().year,
-                    "subject": config.SENDGRID_SUBJECT,
+                    "subject": subject,
+                    "lang": lang,
                 },
             }
         ],
@@ -79,7 +88,7 @@ def _send_via_sendgrid(email: str, first_name: str, confirmation_url: str) -> bo
             "email": config.SENDGRID_FROM_EMAIL,
             "name": config.SENDGRID_FROM_NAME,
         },
-        "template_id": config.SENDGRID_TEMPLATE_ID,
+        "template_id": template_id,
     }
 
     try:
@@ -94,7 +103,10 @@ def _send_via_sendgrid(email: str, first_name: str, confirmation_url: str) -> bo
         return False
 
     if response.status_code == 202:
-        print(f"[EmailService] Verification email sent to {email} via SendGrid")
+        print(
+            f"[EmailService] Verification email sent to {email} via SendGrid "
+            f"(lang={lang}, template={template_id})"
+        )
         return True
 
     print(
@@ -104,24 +116,28 @@ def _send_via_sendgrid(email: str, first_name: str, confirmation_url: str) -> bo
     return False
 
 
-def send_verification_email(email: str, token: str, first_name: str = "") -> bool:
-    """Send a verification email. Returns True on success.
+def send_verification_email(email: str, token: str, first_name: str = "", lang: str = "en") -> bool:
+    """Send a verification email in the given language. Returns True on success.
 
     Provider priority:
       1. SendGrid dynamic template (when SENDGRID_API_KEY + SENDGRID_TEMPLATE_ID are set)
       2. SMTP (when SMTP_HOST is set)
       3. Console print of the verification link (local development)
     """
-    verify_url = f"{config.APP_BASE_URL}/api/auth/verify-email?token={token}"
+    lang = backend_i18n.normalize_lang(lang)
+    # Confirmation link points at the frontend origin, served by the SPA fallback /
+    # preview proxy which forwards /api to the backend. Browser GETs render the
+    # verification HTML page; the SPA also reads ?verify_token= as a fallback.
+    verify_url = f"{config.APP_FRONTEND_URL}/api/auth/verify-email?token={token}&lang={lang}"
     first_name = (first_name or "").strip()
 
     # 1. SendGrid (preferred)
     if config.SENDGRID_API_KEY and config.SENDGRID_TEMPLATE_ID:
-        return _send_via_sendgrid(email, first_name, verify_url)
+        return _send_via_sendgrid(email, first_name, verify_url, lang)
 
     # 2. SMTP fallback
     if config.SMTP_HOST and config.SMTP_FROM_EMAIL:
-        msg = _build_verification_email(email, verify_url)
+        msg = _build_verification_email(email, verify_url, lang)
         try:
             if config.SMTP_USE_SSL:
                 context = ssl.create_default_context()

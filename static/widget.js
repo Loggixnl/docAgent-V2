@@ -1,4 +1,4 @@
-(function() {
+﻿(function() {
     // 1. Resolve configuration from script data-attributes
     const currentScript = (() => {
         if (document.currentScript) return document.currentScript;
@@ -18,14 +18,130 @@
                 return parsed.origin;
             }
         } catch (e) {}
-        return 'https://docagent-ai-production-f51e.up.railway.app';
+        return 'https://docagent-v2-production.up.railway.app';
     })();
 
-    const apiUrl = (currentScript.getAttribute('data-api-url') || scriptOrigin || 'https://docagent-ai-production-f51e.up.railway.app').replace(/\/$/, '');
+    // apiUrl: prefer data-api-url attribute (set by both embed and console snippets),
+    // then fall back to the origin the script was loaded from, then production fallback.
+    const apiUrl = (
+        (currentScript && currentScript.getAttribute('data-api-url')) ||
+        scriptOrigin ||
+        'https://docagent-v2-production.up.railway.app'
+    ).replace(/\/+$/, '');
     const chatbotId = currentScript.getAttribute('data-chatbot-id') || 'default';
     const botName = currentScript.getAttribute('data-bot-name') || 'DocAgent AI';
     const themeColor = currentScript.getAttribute('data-color') || '#D946EF';
-    const greetingMsg = currentScript.getAttribute('data-greeting') || 'Hello! How can I help you with our company policies today?';
+
+    // 1b. Language resolution:
+    // If in localStorage "langSelected" is nl -> Dutch, if en -> English, if nothing selected -> always English.
+    function getActiveLang() {
+        // 1. Highest Priority: localStorage "langSelected"
+        try {
+            const stored = (localStorage.getItem('langSelected') || '').toLowerCase().trim().replace(/['"]/g, '');
+            if (stored === 'nl' || stored.startsWith('nl')) return 'nl';
+            if (stored === 'en' || stored.startsWith('en')) return 'en';
+        } catch (e) {}
+
+        // 2. Fallback: data-lang attribute from script tag (if present)
+        try {
+            const attr = (currentScript && currentScript.getAttribute('data-lang') || '').toLowerCase().trim();
+            if (attr === 'nl' || attr.startsWith('nl')) return 'nl';
+            if (attr === 'en' || attr.startsWith('en')) return 'en';
+        } catch (e) {}
+
+        // 3. Default: always English
+        return 'en';
+    }
+
+    let lang = getActiveLang();
+
+    const STRINGS = {
+        en: {
+            defaultGreeting: 'Hello! How can I help you with our company policies today?',
+            activeAssistant: 'Active Assistant',
+            closeChat: 'Close chat',
+            openChatbot: 'Open chatbot',
+            sendMessage: 'Send message',
+            inputPlaceholder: 'Ask a question about policies...',
+            contactPillTitle: 'Contact HR / Admin with a specific question or request',
+            contactPill: 'Contact HR / Admin',
+            inquiryBadge: 'Direct HR Inquiry',
+            inquiryTitle: 'Contact HR / Admin Support',
+            inquiryDesc: 'Have a specific question, policy exception, or request? Submit directly to the Admin Dashboard for review.',
+            emailLabel: 'Your Email Address',
+            emailPlaceholder: 'e.g. employee@company.com',
+            titleLabel: 'Inquiry Title / Subject',
+            titlePlaceholder: 'e.g. Leave request exception or clarification',
+            descLabel: 'Description / Details',
+            descPlaceholder: 'Provide full details for the HR admin team...',
+            backToChat: 'Back to Chat',
+            sendToAdmin: 'Send to Admin',
+            sending: 'Sending...',
+            sourcesBtn: 'View {n} referenced source(s)',
+            matchBadge: 'Match: {p}%',
+            errEmailRequired: 'Please enter your work or personal email address.',
+            errEmailInvalid: 'Please enter a valid email address (e.g. name@company.com).',
+            errTitleRequired: 'Please enter an inquiry title / subject.',
+            errDescRequired: 'Please describe your request or question in the description field.',
+            errChat: '⚠️ Sorry, there was an issue processing your query. Please try again.',
+            errChatConnection: '⚠️ Connection error. Could not reach the chatbot service.',
+            errSubmit: 'Failed to submit inquiry. Please try again.',
+            errInquiryConnection: 'Connection error. Could not reach the server.',
+            inquirySent: '### 📨 Inquiry Submitted to HR Admin\n\n**Subject:** {title}\n**Contact Email:** `{email}`\n\nYour inquiry has been successfully forwarded to the Admin Dashboard for review. Our HR administration team will inspect your request and reach out.\n\nYou can continue asking policy questions below! ✨'
+        },
+        nl: {
+            defaultGreeting: 'Hallo! Hoe kan ik je vandaag helpen met ons bedrijfsbeleid?',
+            activeAssistant: 'Actieve assistent',
+            closeChat: 'Chat sluiten',
+            openChatbot: 'Chatbot openen',
+            sendMessage: 'Bericht versturen',
+            inputPlaceholder: 'Stel een vraag over beleidsregels...',
+            contactPillTitle: 'Contact HR / beheerder met een specifieke vraag of verzoek',
+            contactPill: 'Contact HR / beheerder',
+            inquiryBadge: 'Directe HR-vraag',
+            inquiryTitle: 'Contact HR / beheerdersondersteuning',
+            inquiryDesc: 'Een specifieke vraag, beleidsuitzondering of verzoek? Dien het direct in bij het beheerdersdashboard voor beoordeling.',
+            emailLabel: 'Je e-mailadres',
+            emailPlaceholder: 'bijv. medewerker@bedrijf.nl',
+            titleLabel: 'Vraagtitel / onderwerp',
+            titlePlaceholder: 'bijv. Verlofaanvraag uitzondering of verduidelijking',
+            descLabel: 'Beschrijving / details',
+            descPlaceholder: 'Geef volledige details voor het HR-beheerteam...',
+            backToChat: 'Terug naar chat',
+            sendToAdmin: 'Verstuur naar beheerder',
+            sending: 'Versturen...',
+            sourcesBtn: '{n} geciteerde bron(nen) bekijken',
+            matchBadge: 'Match: {p}%',
+            errEmailRequired: 'Voer je werk- of persoonlijke e-mailadres in.',
+            errEmailInvalid: 'Voer een geldig e-mailadres in (bijv. naam@bedrijf.nl).',
+            errTitleRequired: 'Voer een vraagtitel / onderwerp in.',
+            errDescRequired: 'Beschrijf je verzoek of vraag in het beschrijvingsveld.',
+            errChat: '⚠️ Er is een probleem opgetreden bij het verwerken van je vraag. Probeer het opnieuw.',
+            errChatConnection: '⚠️ Verbindingsfout. De chatbot-service is niet bereikbaar.',
+            errSubmit: 'Vraag indienen mislukt. Probeer het opnieuw.',
+            errInquiryConnection: 'Verbindingsfout. De server is niet bereikbaar.',
+            inquirySent: '### 📨 Verzoek ingediend bij HR-beheerder\n\n**Onderwerp:** {title}\n**Contact-e-mail:** `{email}`\n\nJe verzoek is doorgestuurd naar het beheerdersdashboard voor beoordeling. Ons HR-beheerteam beoordeelt je verzoek en neemt contact op.\n\nJe kunt hieronder gewoon beleidsvragen blijven stellen! ✨'
+        }
+    };
+
+    function t(key, vars) {
+        const cur = lang || getActiveLang();
+        let s = (STRINGS[cur] && STRINGS[cur][key] != null) ? STRINGS[cur][key] : (STRINGS.en[key] != null ? STRINGS.en[key] : key);
+        if (vars) {
+            Object.keys(vars).forEach(function (k) {
+                s = s.split('{' + k + '}').join(String(vars[k]));
+            });
+        }
+        return s;
+    }
+
+    function getGreetingText() {
+        const custom = (currentScript && currentScript.getAttribute('data-greeting')) || '';
+        if (custom && custom !== STRINGS.en.defaultGreeting && custom !== STRINGS.nl.defaultGreeting) {
+            return custom;
+        }
+        return t('defaultGreeting');
+    }
     let launcherImage = (currentScript.getAttribute('data-launcher-image') || '').trim();
 
     // State
@@ -888,6 +1004,51 @@
             fill: currentColor;
         }
 
+        /* Header action buttons and language segmented toggle */
+        .docagent-widget-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .docagent-widget-lang-segmented {
+            display: inline-flex;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.22);
+            border: 1px solid rgba(255, 255, 255, 0.32);
+            border-radius: 9999px;
+            padding: 2px;
+            gap: 2px;
+        }
+
+        .docagent-lang-btn {
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.75);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            padding: 2px 7px;
+            border-radius: 9999px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+            line-height: 1.25;
+            outline: none;
+        }
+
+        .docagent-lang-btn:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .docagent-lang-btn.active {
+            background: #ffffff !important;
+            color: #0f172a !important;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+            font-weight: 800;
+        }
+
         /* Mobile viewport responsiveness */
         @media (max-width: 640px) {
             .docagent-widget-container {
@@ -942,50 +1103,56 @@
                         <span class="docagent-widget-header-name">${escapeHtml(botName)}</span>
                         <span class="docagent-widget-header-status">
                             <span class="docagent-widget-header-dot"></span>
-                            Active Assistant
+                            ${t('activeAssistant')}
                         </span>
                     </div>
                 </div>
-                <button class="docagent-widget-header-close" title="Close chat">
-                    ${SVGS.close}
-                </button>
+                <div class="docagent-widget-header-actions">
+                    <div class="docagent-widget-lang-segmented" role="group" aria-label="Language selection">
+                        <button type="button" class="docagent-lang-btn ${lang === 'en' ? 'active' : ''}" data-lang-val="en" title="English">EN</button>
+                        <button type="button" class="docagent-lang-btn ${lang === 'nl' ? 'active' : ''}" data-lang-val="nl" title="Nederlands">NL</button>
+                    </div>
+                    <button class="docagent-widget-header-close" title="${t('closeChat')}">
+                        ${SVGS.close}
+                    </button>
+                </div>
             </div>
             <div class="docagent-widget-chat-history"></div>
             <div class="docagent-widget-inquiry-view" style="display: none;">
                 <div class="docagent-widget-inquiry-header">
                     <div class="docagent-widget-inquiry-badge">
-                        ${SVGS.support} Direct HR Inquiry
+                        ${SVGS.support} ${t('inquiryBadge')}
                     </div>
-                    <h3 class="docagent-widget-inquiry-title">Contact HR / Admin Support</h3>
-                    <p class="docagent-widget-inquiry-desc">Have a specific question, policy exception, or request? Submit directly to the Admin Dashboard for review.</p>
+                    <h3 class="docagent-widget-inquiry-title">${t('inquiryTitle')}</h3>
+                    <p class="docagent-widget-inquiry-desc">${t('inquiryDesc')}</p>
                 </div>
                 <div class="docagent-widget-form-card">
                     <div class="docagent-widget-form-group">
                         <label class="docagent-widget-form-label">
-                            <span>Your Email Address</span>
+                            <span>${t('emailLabel')}</span>
                             <span style="color: #EF4444;">*</span>
                         </label>
-                        <input type="email" class="docagent-widget-form-input docagent-inquiry-email" placeholder="e.g. employee@company.com" autocomplete="email" />
+                        <input type="email" class="docagent-widget-form-input docagent-inquiry-email" placeholder="${t('emailPlaceholder')}" autocomplete="email" />
                     </div>
                     <div class="docagent-widget-form-group">
                         <label class="docagent-widget-form-label">
-                            <span>Inquiry Title / Subject</span>
+                            <span>${t('titleLabel')}</span>
                             <span style="color: #EF4444;">*</span>
                         </label>
-                        <input type="text" class="docagent-widget-form-input docagent-inquiry-title" placeholder="e.g. Leave request exception or clarification" />
+                        <input type="text" class="docagent-widget-form-input docagent-inquiry-title" placeholder="${t('titlePlaceholder')}" />
                     </div>
                     <div class="docagent-widget-form-group">
                         <label class="docagent-widget-form-label">
-                            <span>Description / Details</span>
+                            <span>${t('descLabel')}</span>
                             <span style="color: #EF4444;">*</span>
                         </label>
-                        <textarea class="docagent-widget-form-textarea docagent-inquiry-desc" rows="4" placeholder="Provide full details for the HR admin team..."></textarea>
+                        <textarea class="docagent-widget-form-textarea docagent-inquiry-desc" rows="4" placeholder="${t('descPlaceholder')}"></textarea>
                     </div>
                     <div class="docagent-widget-form-error"></div>
                     <div class="docagent-widget-form-actions">
-                        <button type="button" class="docagent-widget-form-cancel">Back to Chat</button>
+                        <button type="button" class="docagent-widget-form-cancel">${t('backToChat')}</button>
                         <button type="button" class="docagent-widget-form-submit">
-                            <span>Send to Admin</span>
+                            <span>${t('sendToAdmin')}</span>
                             ${SVGS.send}
                         </button>
                     </div>
@@ -993,14 +1160,14 @@
             </div>
             <div class="docagent-widget-footer">
                 <div class="docagent-widget-pill-bar">
-                    <button type="button" class="docagent-widget-pill-btn" title="Contact HR / Admin with a specific question or request">
+                    <button type="button" class="docagent-widget-pill-btn" title="${t('contactPillTitle')}">
                         ${SVGS.support}
-                        <span>Contact HR / Admin</span>
+                        <span>${t('contactPill')}</span>
                     </button>
                 </div>
                 <div class="docagent-widget-input-row">
-                    <textarea class="docagent-widget-input" placeholder="Ask a question about policies..." rows="1" style="border: none !important; outline: none !important; box-shadow: none !important; -webkit-box-shadow: none !important; background: transparent !important;"></textarea>
-                    <button class="docagent-widget-send-btn" disabled title="Send message">
+                    <textarea class="docagent-widget-input" placeholder="${t('inputPlaceholder')}" rows="1" style="border: none !important; outline: none !important; box-shadow: none !important; -webkit-box-shadow: none !important; background: transparent !important;"></textarea>
+                    <button class="docagent-widget-send-btn" disabled title="${t('sendMessage')}">
                         ${SVGS.send}
                     </button>
                 </div>
@@ -1013,7 +1180,7 @@
         // Launcher
         const launcher = document.createElement('button');
         launcher.className = 'docagent-widget-launcher';
-        launcher.setAttribute('aria-label', 'Open chatbot');
+        launcher.setAttribute('aria-label', t('openChatbot'));
 
         function renderLauncherIcon() {
             if (launcherImage) {
@@ -1047,6 +1214,96 @@
         const inquiryCancelBtn = panel.querySelector('.docagent-widget-form-cancel');
         const inquirySubmitBtn = panel.querySelector('.docagent-widget-form-submit');
 
+        // Language Switcher & Dynamic UI Translation Logic
+        function refreshTranslations() {
+            lang = getActiveLang();
+
+            // 1. Update language switcher button states
+            panel.querySelectorAll('.docagent-lang-btn').forEach(btn => {
+                const val = btn.getAttribute('data-lang-val');
+                btn.classList.toggle('active', val === lang);
+            });
+
+            // 2. Header
+            const statusEl = panel.querySelector('.docagent-widget-header-status');
+            if (statusEl) {
+                statusEl.innerHTML = '<span class="docagent-widget-header-dot"></span> ' + t('activeAssistant');
+            }
+            const closeBtn = panel.querySelector('.docagent-widget-header-close');
+            if (closeBtn) closeBtn.title = t('closeChat');
+            launcher.setAttribute('aria-label', t('openChatbot'));
+
+            // 3. Footer input & pill
+            if (inputEl) inputEl.placeholder = t('inputPlaceholder');
+            if (sendBtnEl) sendBtnEl.title = t('sendMessage');
+            if (pillBtnEl) {
+                pillBtnEl.title = t('contactPillTitle');
+                const pillSpan = pillBtnEl.querySelector('span');
+                if (pillSpan) pillSpan.textContent = t('contactPill');
+            }
+
+            // 4. Inquiry view
+            const inqBadge = panel.querySelector('.docagent-widget-inquiry-badge');
+            if (inqBadge) inqBadge.innerHTML = SVGS.support + ' ' + t('inquiryBadge');
+            const inqTitle = panel.querySelector('.docagent-widget-inquiry-title');
+            if (inqTitle) inqTitle.textContent = t('inquiryTitle');
+            const inqDesc = panel.querySelector('.docagent-widget-inquiry-desc');
+            if (inqDesc) inqDesc.textContent = t('inquiryDesc');
+
+            const formLabels = panel.querySelectorAll('.docagent-widget-form-label');
+            const labelKeys = ['emailLabel', 'titleLabel', 'descLabel'];
+            formLabels.forEach(function(lbl, idx) {
+                if (labelKeys[idx]) {
+                    const spans = lbl.querySelectorAll('span');
+                    if (spans[0]) spans[0].textContent = t(labelKeys[idx]);
+                }
+            });
+
+            if (inquiryEmailEl) inquiryEmailEl.placeholder = t('emailPlaceholder');
+            if (inquiryTitleEl) inquiryTitleEl.placeholder = t('titlePlaceholder');
+            if (inquiryDescEl) inquiryDescEl.placeholder = t('descPlaceholder');
+            if (inquiryCancelBtn) inquiryCancelBtn.textContent = t('backToChat');
+            if (inquirySubmitBtn) {
+                const submitSpan = inquirySubmitBtn.querySelector('span');
+                if (submitSpan) submitSpan.textContent = t('sendToAdmin');
+            }
+
+            // 5. If conversation hasn't started yet, refresh initial greeting bubble
+            if (state.chatHistory.length === 0) {
+                const firstBubble = chatHistoryEl.querySelector('.docagent-widget-msg-agent .docagent-widget-msg-bubble');
+                if (firstBubble) {
+                    firstBubble.innerHTML = formatMarkdown(getGreetingText());
+                }
+            }
+        }
+
+        function setLanguage(newLang) {
+            lang = newLang === 'nl' ? 'nl' : 'en';
+            try {
+                localStorage.setItem('langSelected', lang);
+            } catch (e) {}
+            refreshTranslations();
+        }
+
+        // Click handlers for the language buttons
+        panel.querySelectorAll('.docagent-lang-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const targetLang = btn.getAttribute('data-lang-val');
+                setLanguage(targetLang);
+            });
+        });
+
+        // Listen for storage changes in the same window or other tabs
+        try {
+            window.addEventListener('storage', (e) => {
+                if (e.key === 'langSelected') {
+                    lang = getActiveLang();
+                    refreshTranslations();
+                }
+            });
+        } catch (e) {}
+
         // 5. Message rendering functions
         function appendMessage(sender, text, context = null) {
             const msgWrapper = document.createElement('div');
@@ -1071,7 +1328,7 @@
 
                     const toggleBtn = document.createElement('button');
                     toggleBtn.className = 'docagent-widget-sources-btn';
-                    toggleBtn.innerHTML = `${SVGS.chevron} View ${context.length} referenced source(s)`;
+                    toggleBtn.innerHTML = `${SVGS.chevron} ${t('sourcesBtn', { n: context.length })}`;
 
                     const contentList = document.createElement('div');
                     contentList.className = 'docagent-widget-sources-content';
@@ -1083,7 +1340,7 @@
                         item.innerHTML = `
                             <div class="docagent-widget-source-header">
                                 <span class="docagent-widget-source-title">[${index + 1}] ${escapeHtml(chunk.filename)}</span>
-                                <span class="docagent-widget-source-badge">Match: ${score}%</span>
+                                <span class="docagent-widget-source-badge">${t('matchBadge', { p: score })}</span>
                             </div>
                             <p class="docagent-widget-source-text">"${escapeHtml(chunk.text.substring(0, 140))}..."</p>
                         `;
@@ -1157,9 +1414,13 @@
                 renderLauncherIcon();
                 inputEl.focus();
 
+                // Refresh translations to pick up any latest langSelected from localStorage
+                lang = getActiveLang();
+                refreshTranslations();
+
                 // Greet on first open
                 if (!state.hasGreeted) {
-                    appendMessage('agent', greetingMsg);
+                    appendMessage('agent', getGreetingText());
                     state.hasGreeted = true;
                 }
             } else {
@@ -1200,7 +1461,8 @@
                     body: JSON.stringify({
                         query: text,
                         chat_history: state.chatHistory.slice(-10),
-                        chatbot_id: chatbotId
+                        chatbot_id: chatbotId,
+                        lang: lang
                     })
                 });
 
@@ -1212,13 +1474,13 @@
                     appendMessage('agent', data.answer, data.context);
                     state.chatHistory.push({ role: 'model', text: data.answer });
                 } else {
-                    appendMessage('agent', '⚠️ Sorry, there was an issue processing your query. Please try again.');
+                    appendMessage('agent', t('errChat'));
                 }
             } catch (error) {
                 removeTypingIndicator(typingId);
                 state.isTyping = false;
                 console.error('Chat error:', error);
-                appendMessage('agent', '⚠️ Connection error. Could not reach the chatbot service.');
+                appendMessage('agent', t('errChatConnection'));
             }
         }
 
@@ -1250,33 +1512,33 @@
             const desc = inquiryDescEl.value.trim();
 
             if (!email) {
-                showInquiryError("Please enter your work or personal email address.");
+                showInquiryError(t('errEmailRequired'));
                 inquiryEmailEl.focus();
                 return;
             }
 
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(email)) {
-                showInquiryError("Please enter a valid email address (e.g. name@company.com).");
+                showInquiryError(t('errEmailInvalid'));
                 inquiryEmailEl.focus();
                 return;
             }
 
             if (!title) {
-                showInquiryError("Please enter an inquiry title / subject.");
+                showInquiryError(t('errTitleRequired'));
                 inquiryTitleEl.focus();
                 return;
             }
 
             if (!desc) {
-                showInquiryError("Please describe your request or question in the description field.");
+                showInquiryError(t('errDescRequired'));
                 inquiryDescEl.focus();
                 return;
             }
 
             inquiryErrorEl.style.display = 'none';
             inquirySubmitBtn.disabled = true;
-            inquirySubmitBtn.innerHTML = `<span>Sending...</span>`;
+            inquirySubmitBtn.innerHTML = `<span>${t('sending')}</span>`;
 
             try {
                 const response = await fetch(`${apiUrl}/api/widget/inquiry`, {
@@ -1288,7 +1550,8 @@
                         chatbot_id: chatbotId,
                         email: email,
                         title: title,
-                        description: desc
+                        description: desc,
+                        lang: lang
                     })
                 });
 
@@ -1302,19 +1565,19 @@
                     closeInquiryView();
 
                     // Append confirmation to chat so user can seamlessly continue
-                    appendMessage('agent', `### 📨 Inquiry Submitted to HR Admin\n\n**Subject:** ${escapeHtml(title)}\n**Contact Email:** \`${escapeHtml(email)}\`\n\nYour inquiry has been successfully forwarded to the Admin Dashboard for review. Our HR administration team will inspect your request and reach out.\n\nYou can continue asking policy questions below! ✨`);
+                    appendMessage('agent', t('inquirySent', { title: escapeHtml(title), email: escapeHtml(email) }));
                     chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
                     inputEl.focus();
                 } else {
                     const err = await response.json().catch(() => ({}));
-                    showInquiryError(err.detail || "Failed to submit inquiry. Please try again.");
+                    showInquiryError(err.detail || t('errSubmit'));
                 }
             } catch (err) {
                 console.error("Inquiry error:", err);
-                showInquiryError("Connection error. Could not reach the server.");
+                showInquiryError(t('errInquiryConnection'));
             } finally {
                 inquirySubmitBtn.disabled = false;
-                inquirySubmitBtn.innerHTML = `<span>Send to Admin</span> ${SVGS.send}`;
+                inquirySubmitBtn.innerHTML = `<span>${t('sendToAdmin')}</span> ${SVGS.send}`;
             }
         }
 

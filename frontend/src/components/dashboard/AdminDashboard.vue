@@ -9,22 +9,22 @@
               <i class="mdi mdi-view-dashboard"></i>
             </span>
             <h1 class="text-base sm:text-lg font-black font-heading text-slate-900 tracking-tight">
-              AI Question & Session Management Dashboard
+              {{ $t('admin.title') }}
             </h1>
           </div>
           <p class="text-xs text-slate-500 mt-1 flex items-center gap-1.5 flex-wrap">
-            <span>Workflow:</span>
-            <span class="font-semibold text-slate-700">User</span>
+            <span>{{ $t('admin.workflow') }}</span>
+            <span class="font-semibold text-slate-700">{{ $t('admin.workflowUser') }}</span>
             <i class="mdi mdi-arrow-right text-[10px] text-slate-400"></i>
-            <span class="font-semibold text-slate-700">Session</span>
+            <span class="font-semibold text-slate-700">{{ $t('admin.workflowSession') }}</span>
             <i class="mdi mdi-arrow-right text-[10px] text-slate-400"></i>
-            <span class="font-semibold text-slate-700">Question</span>
+            <span class="font-semibold text-slate-700">{{ $t('admin.workflowQuestion') }}</span>
             <i class="mdi mdi-arrow-right text-[10px] text-slate-400"></i>
-            <span class="font-semibold text-darkTeal">AI Response</span>
+            <span class="font-semibold text-darkTeal">{{ $t('admin.workflowAiResponse') }}</span>
             <i class="mdi mdi-arrow-right text-[10px] text-slate-400"></i>
-            <span class="font-semibold text-purple-700">Admin Review</span>
+            <span class="font-semibold text-purple-700">{{ $t('admin.workflowAdminReview') }}</span>
             <i class="mdi mdi-arrow-right text-[10px] text-slate-400"></i>
-            <span class="font-bold text-emerald-700">Resolved</span>
+            <span class="font-bold text-emerald-700">{{ $t('admin.workflowResolved') }}</span>
           </p>
         </div>
 
@@ -36,16 +36,16 @@
             @click="refreshData"
           >
             <i class="mdi mdi-refresh" :class="{ 'mdi-spin': isLoading }"></i>
-            <span>Refresh</span>
+            <span>{{ $t('admin.refresh') }}</span>
           </button>
 
           <!-- Back to Chat Button -->
-          <button 
+          <button
             class="py-1.5 px-3.5 rounded-xl bg-gradient-to-r from-lightTeal to-darkTeal hover:from-darkTeal hover:to-lightTeal text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
             @click="$emit('backToChat')"
           >
             <i class="mdi mdi-chat-processing-outline"></i>
-            <span>Back to Chat</span>
+            <span>{{ $t('admin.backToChat') }}</span>
           </button>
         </div>
       </div>
@@ -55,53 +55,53 @@
         <!-- 1. Total Sessions -->
         <div class="bg-white border border-gray-200/90 rounded-xl p-3 shadow-xs">
           <div class="flex items-center justify-between text-slate-500 mb-1">
-            <span class="text-[10px] font-bold uppercase tracking-wider">Total Sessions</span>
+            <span class="text-[10px] font-bold uppercase tracking-wider">{{ $t('admin.totalSessions') }}</span>
             <i class="mdi mdi-forum-outline text-darkTeal text-base"></i>
           </div>
           <div class="text-xl font-black text-slate-900">{{ analytics.total_sessions || 0 }}</div>
-          <div class="text-[10px] text-slate-400 mt-0.5">Active chat threads</div>
+          <div class="text-[10px] text-slate-400 mt-0.5">{{ $t('admin.totalSessionsSub') }}</div>
         </div>
 
         <!-- 2. Total Questions (Queries) -->
         <div class="bg-white border border-gray-200/90 rounded-xl p-3 shadow-xs">
           <div class="flex items-center justify-between text-slate-500 mb-1">
-            <span class="text-[10px] font-bold uppercase tracking-wider">Total Questions</span>
+            <span class="text-[10px] font-bold uppercase tracking-wider">{{ $t('admin.totalQuestions') }}</span>
             <i class="mdi mdi-help-circle-outline text-purple-600 text-base"></i>
           </div>
           <div class="text-xl font-black text-slate-900">{{ analytics.total_questions || 0 }}</div>
-          <div class="text-[10px] text-purple-700/80 font-medium mt-0.5">Queries submitted</div>
+          <div class="text-[10px] text-purple-700/80 font-medium mt-0.5">{{ $t('admin.totalQuestionsSub') }}</div>
         </div>
 
         <!-- 3. Unanswered (Queries) -->
         <div class="bg-white border border-gray-200/90 rounded-xl p-3 shadow-xs">
           <div class="flex items-center justify-between text-slate-500 mb-1">
-            <span class="text-[10px] font-bold uppercase tracking-wider">Unanswered</span>
+            <span class="text-[10px] font-bold uppercase tracking-wider">{{ $t('admin.unanswered') }}</span>
             <i class="mdi mdi-clock-alert-outline text-amber-500 text-base"></i>
           </div>
           <div class="text-xl font-black text-amber-600">{{ analytics.unanswered_questions || 0 }}</div>
-          <div class="text-[10px] text-amber-600/80 mt-0.5">Pending response</div>
+          <div class="text-[10px] text-amber-600/80 mt-0.5">{{ $t('admin.unansweredSub') }}</div>
         </div>
 
         <!-- 4. Needs Review (Queries) -->
         <div class="bg-white border border-gray-200/90 rounded-xl p-3 shadow-xs">
           <div class="flex items-center justify-between text-slate-500 mb-1">
-            <span class="text-[10px] font-bold uppercase tracking-wider">Needs Review</span>
+            <span class="text-[10px] font-bold uppercase tracking-wider">{{ $t('admin.needsReview') }}</span>
             <i class="mdi mdi-alert-circle-outline text-coralOrange text-base"></i>
           </div>
           <div class="text-xl font-black text-coralOrange">{{ analytics.needs_review || 0 }}</div>
-          <div class="text-[10px] text-coralOrange/80 mt-0.5">Flagged for HR admin</div>
+          <div class="text-[10px] text-coralOrange/80 mt-0.5">{{ $t('admin.needsReviewSub') }}</div>
         </div>
 
         <!-- 5. Resolved (Queries) -->
         <div class="bg-white border border-gray-200/90 rounded-xl p-3 shadow-xs col-span-2 sm:col-span-1">
           <div class="flex items-center justify-between text-slate-500 mb-1">
-            <span class="text-[10px] font-bold uppercase tracking-wider">Resolved</span>
+            <span class="text-[10px] font-bold uppercase tracking-wider">{{ $t('admin.resolved') }}</span>
             <i class="mdi mdi-check-circle-outline text-emerald-600 text-base"></i>
           </div>
           <div class="flex items-baseline gap-1 text-sm font-black text-slate-900">
-            <span class="text-emerald-700">{{ analytics.resolved || 0 }} Res</span>
+            <span class="text-emerald-700">{{ $t('admin.resolvedShort', { n: analytics.resolved || 0 }) }}</span>
             <span class="text-slate-300">/</span>
-            <span class="text-purple-600">{{ analytics.admin_answered || 0 }} Ans</span>
+            <span class="text-purple-600">{{ $t('admin.answeredShort', { n: analytics.admin_answered || 0 }) }}</span>
           </div>
           <!-- Progress bar -->
           <div class="w-full bg-emerald-100 h-1.5 rounded-full overflow-hidden mt-2">
@@ -125,7 +125,7 @@
             @click="currentTab = 'questions'"
           >
             <i class="mdi mdi-email-alert-outline text-base"></i>
-            <span>Query Management</span>
+            <span>{{ $t('admin.queryManagement') }}</span>
             <span class="text-[10px] px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-extrabold">
               {{ questions.length }}
             </span>
@@ -137,7 +137,7 @@
             @click="currentTab = 'sessions'"
           >
             <i class="mdi mdi-message-reply-text-outline text-base"></i>
-            <span>Chat Sessions</span>
+            <span>{{ $t('admin.chatSessions') }}</span>
             <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-extrabold">
               {{ sessions.length }}
             </span>
@@ -151,7 +151,7 @@
         <div class="flex items-center gap-2 mb-3 shrink-0">
           <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-50 border border-purple-200 text-purple-700 text-[10px] font-extrabold">
             <i class="mdi mdi-email-alert-outline"></i>
-            Showing Contact HR / Admin queries only
+            {{ $t('admin.showingInquiries') }}
           </span>
         </div>
 
@@ -163,7 +163,7 @@
             <input 
               v-model="questionSearch"
               type="text"
-              placeholder="Search queries by message, email, or ID..."
+              :placeholder="$t('admin.searchQueries')"
               class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-gray-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-darkTeal focus:bg-white transition-all font-medium"
               @input="debounceFetchQuestions"
             />
@@ -171,16 +171,16 @@
 
           <div class="flex items-center gap-2 flex-wrap">
             <!-- Status Filter -->
-            <select 
+            <select
               v-model="statusFilter"
               class="bg-slate-50 border border-gray-200 rounded-xl py-2 px-3 text-xs font-bold text-slate-700 focus:outline-none focus:border-darkTeal cursor-pointer"
               @change="fetchQuestions"
             >
-              <option value="">All Statuses</option>
-              <option value="new">New</option>
-              <option value="needs_review">Needs Review</option>
-              <option value="admin_answered">Admin Answered</option>
-              <option value="resolved">Resolved</option>
+              <option value="">{{ $t('admin.statusAll') }}</option>
+              <option value="new">{{ $t('admin.statusNew') }}</option>
+              <option value="needs_review">{{ $t('admin.statusNeedsReview') }}</option>
+              <option value="admin_answered">{{ $t('admin.statusAdminAnswered') }}</option>
+              <option value="resolved">{{ $t('admin.statusResolved') }}</option>
             </select>
           </div>
         </div>
@@ -189,24 +189,24 @@
         <div class="flex-1 overflow-y-auto border border-gray-200 rounded-2xl shadow-xs min-h-0">
           <div v-if="isLoadingQuestions" class="h-64 flex flex-col items-center justify-center text-slate-400 gap-2">
             <i class="mdi mdi-loading mdi-spin text-3xl text-purple-500"></i>
-            <span class="text-xs font-semibold">Loading HR/Admin queries...</span>
+            <span class="text-xs font-semibold">{{ $t('admin.loadingQueries') }}</span>
           </div>
 
           <div v-else-if="questions.length === 0" class="h-64 flex flex-col items-center justify-center text-slate-400 gap-2 text-center p-6">
             <i class="mdi mdi-email-off-outline text-4xl text-slate-300"></i>
-            <h4 class="text-xs font-bold text-slate-700">No queries found</h4>
-            <p class="text-[11px] text-slate-400 max-w-sm">No Contact HR / Admin queries have been submitted yet, or none match the selected filters.</p>
+            <h4 class="text-xs font-bold text-slate-700">{{ $t('admin.noQueries') }}</h4>
+            <p class="text-[11px] text-slate-400 max-w-sm">{{ $t('admin.noQueriesSub') }}</p>
           </div>
 
           <table v-else class="w-full text-left border-collapse">
             <thead class="bg-purple-50/60 sticky top-0 z-10 border-b border-purple-100">
               <tr class="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider">
-                <th class="py-3 px-3.5">Query ID</th>
-                <th class="py-3 px-3.5">User & Session</th>
-                <th class="py-3 px-3.5">Query / Message</th>
-                <th class="py-3 px-3.5">Status</th>
-                <th class="py-3 px-3.5">Submitted</th>
-                <th class="py-3 px-3.5 text-right">Actions</th>
+                <th class="py-3 px-3.5">{{ $t('admin.colQueryId') }}</th>
+                <th class="py-3 px-3.5">{{ $t('admin.colUserSession') }}</th>
+                <th class="py-3 px-3.5">{{ $t('admin.colQueryMessage') }}</th>
+                <th class="py-3 px-3.5">{{ $t('admin.colStatus') }}</th>
+                <th class="py-3 px-3.5">{{ $t('admin.colSubmitted') }}</th>
+                <th class="py-3 px-3.5 text-right">{{ $t('admin.colActions') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100 text-xs">
@@ -222,8 +222,8 @@
 
                 <!-- User & Session -->
                 <td class="py-3 px-3.5 max-w-[160px]">
-                  <div class="font-bold text-slate-800 truncate" :title="q.user_email || 'Anonymous'">
-                    {{ q.user_email || 'User' }}
+                  <div class="font-bold text-slate-800 truncate" :title="q.user_email || $t('admin.anonymous')">
+                    {{ q.user_email || $t('common.user') }}
                   </div>
                   <div class="text-[10px] text-slate-400 truncate mt-0.5" :title="q.session_title || q.session_id">
                     {{ q.session_title || q.session_id }}
@@ -240,10 +240,10 @@
                   </div>
                   <!-- Admin Answer snippet (if present) -->
                   <div v-if="q.admin_response" class="text-[10px] text-purple-700 font-semibold line-clamp-1 mt-1">
-                    <i class="mdi mdi-shield-check text-xs"></i> Admin: {{ q.admin_response }}
+                    <i class="mdi mdi-shield-check text-xs"></i> {{ $t('admin.adminPrefix') }} {{ q.admin_response }}
                   </div>
                   <div v-else class="text-[10px] text-amber-600 font-semibold mt-1">
-                    <i class="mdi mdi-clock-alert-outline text-xs"></i> Awaiting admin response
+                    <i class="mdi mdi-clock-alert-outline text-xs"></i> {{ $t('admin.awaitingAdmin') }}
                   </div>
                 </td>
 
@@ -267,19 +267,19 @@
                   <div class="flex items-center justify-end gap-1.5">
                     <button 
                       class="py-1 px-2.5 rounded-lg bg-white border border-purple-300 hover:border-purple-500 text-purple-700 hover:bg-purple-50 font-bold text-xs transition-all cursor-pointer shadow-xs flex items-center gap-1"
-                      title="Review and respond to this query"
+                      :title="$t('admin.reviewTitle')"
                       @click="openQuestionReview(q)"
                     >
                       <i class="mdi mdi-reply-outline"></i>
-                      <span>Review</span>
+                      <span>{{ $t('common.review') }}</span>
                     </button>
-                    <button 
+                    <button
                       class="py-1 px-2 rounded-lg bg-white border border-red-200 hover:border-red-400 text-red-600 hover:bg-red-50 font-bold text-xs transition-all cursor-pointer shadow-xs flex items-center gap-1"
-                      title="Delete query"
+                      :title="$t('admin.deleteQueryTitle')"
                       @click="promptDeleteQuery(q)"
                     >
                       <i class="mdi mdi-delete-outline text-sm"></i>
-                      <span>Delete</span>
+                      <span>{{ $t('common.delete') }}</span>
                     </button>
                   </div>
                 </td>
@@ -299,7 +299,7 @@
             <input 
               v-model="sessionSearch"
               type="text"
-              placeholder="Search sessions by title, user email, or session ID..."
+              :placeholder="$t('admin.searchSessions')"
               class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-gray-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-darkTeal focus:bg-white transition-all font-medium"
               @input="debounceFetchSessions"
             />
@@ -310,24 +310,24 @@
         <div class="flex-1 overflow-y-auto border border-gray-200 rounded-2xl shadow-xs min-h-0">
           <div v-if="isLoadingSessions" class="h-64 flex flex-col items-center justify-center text-slate-400 gap-2">
             <i class="mdi mdi-loading mdi-spin text-3xl text-darkTeal"></i>
-            <span class="text-xs font-semibold">Loading sessions...</span>
+            <span class="text-xs font-semibold">{{ $t('admin.loadingSessions') }}</span>
           </div>
 
           <div v-else-if="sessions.length === 0" class="h-64 flex flex-col items-center justify-center text-slate-400 gap-2 text-center p-6">
             <i class="mdi mdi-chat-outline text-4xl text-slate-300"></i>
-            <h4 class="text-xs font-bold text-slate-700">No chat sessions found</h4>
-            <p class="text-[11px] text-slate-400 max-w-sm">No sessions found matching your search.</p>
+            <h4 class="text-xs font-bold text-slate-700">{{ $t('admin.noSessions') }}</h4>
+            <p class="text-[11px] text-slate-400 max-w-sm">{{ $t('admin.noSessionsSub') }}</p>
           </div>
 
           <table v-else class="w-full text-left border-collapse">
             <thead class="bg-slate-50/80 sticky top-0 z-10 border-b border-gray-200">
               <tr class="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider">
-                <th class="py-3 px-3.5">Session ID</th>
-                <th class="py-3 px-3.5">Session Title</th>
-                <th class="py-3 px-3.5">User</th>
-                <th class="py-3 px-3.5">Questions</th>
-                <th class="py-3 px-3.5">Last Active</th>
-                <th class="py-3 px-3.5 text-right">Actions</th>
+                <th class="py-3 px-3.5">{{ $t('admin.colSessionId') }}</th>
+                <th class="py-3 px-3.5">{{ $t('admin.colSessionTitle') }}</th>
+                <th class="py-3 px-3.5">{{ $t('admin.colUser') }}</th>
+                <th class="py-3 px-3.5">{{ $t('admin.colQuestions') }}</th>
+                <th class="py-3 px-3.5">{{ $t('admin.colLastActive') }}</th>
+                <th class="py-3 px-3.5 text-right">{{ $t('admin.colActions') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100 text-xs">
@@ -343,18 +343,18 @@
 
                 <!-- Title -->
                 <td class="py-3 px-3.5 font-bold text-slate-900 max-w-xs truncate" :title="s.title">
-                  {{ s.title || 'New Chat' }}
+                  {{ s.title || $t('common.newChat') }}
                 </td>
 
                 <!-- User -->
                 <td class="py-3 px-3.5 text-slate-600 font-medium">
-                  {{ s.user_email || 'User' }}
+                  {{ s.user_email || $t('common.user') }}
                 </td>
 
                 <!-- Question Count -->
                 <td class="py-3 px-3.5">
                   <span class="px-2 py-0.5 rounded-full bg-lightTeal/15 text-darkTeal font-extrabold text-[10px]">
-                    {{ s.question_count || 0 }} questions
+                    {{ $t('admin.questionsCount', { n: s.question_count || 0 }) }}
                   </span>
                 </td>
 
@@ -368,19 +368,19 @@
                   <div class="flex items-center justify-end gap-1.5">
                     <button 
                       class="py-1 px-2.5 rounded-lg bg-gradient-to-r from-lightTeal to-darkTeal text-white font-bold text-xs hover:opacity-95 transition-all cursor-pointer shadow-xs flex items-center gap-1"
-                      title="View session conversation thread"
+                      :title="$t('admin.viewSessionTitle')"
                       @click="viewSessionConversation(s.id)"
                     >
                       <i class="mdi mdi-forum-outline"></i>
-                      <span>View</span>
+                      <span>{{ $t('common.view') }}</span>
                     </button>
-                    <button 
+                    <button
                       class="py-1 px-2 rounded-lg bg-white border border-red-200 hover:border-red-400 text-red-600 hover:bg-red-50 font-bold text-xs transition-all cursor-pointer shadow-xs flex items-center gap-1"
-                      title="Delete chat session"
+                      :title="$t('admin.deleteSessionTitle')"
                       @click="promptDeleteSession(s)"
                     >
                       <i class="mdi mdi-delete-outline text-sm"></i>
-                      <span>Delete</span>
+                      <span>{{ $t('common.delete') }}</span>
                     </button>
                   </div>
                 </td>
@@ -407,13 +407,13 @@
                 <i class="mdi mdi-shield-check"></i>
               </span>
               <h3 class="text-sm font-black font-heading text-slate-900">
-                Admin Review & Response
+                {{ $t('admin.reviewHeading') }}
               </h3>
             </div>
             <div class="text-[10px] text-slate-500 mt-0.5 flex items-center gap-2">
-              <span>Question ID: <strong class="font-mono">{{ selectedQuestion.id }}</strong></span>
+              <span>{{ $t('admin.questionId') }} <strong class="font-mono">{{ selectedQuestion.id }}</strong></span>
               <span>•</span>
-              <span>Session: <strong class="font-mono">{{ selectedQuestion.session_id }}</strong></span>
+              <span>{{ $t('admin.sessionLabel') }} <strong class="font-mono">{{ selectedQuestion.session_id }}</strong></span>
             </div>
           </div>
           <button 
@@ -430,16 +430,16 @@
           <div class="bg-slate-50 border border-gray-200 rounded-xl p-3.5">
             <div class="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
               <span class="flex items-center gap-1.5 flex-wrap">
-                <span>User Question / Inquiry</span>
+                <span>{{ $t('admin.userQuestion') }}</span>
                 <span v-if="selectedQuestion.user_email" class="text-slate-600 font-semibold normal-case">
-                  (Contact: <a :href="'mailto:' + selectedQuestion.user_email" class="text-darkTeal hover:underline font-bold">{{ selectedQuestion.user_email }}</a>)
+                  ({{ $t('admin.contactLabel') }} <a :href="'mailto:' + selectedQuestion.user_email" class="text-darkTeal hover:underline font-bold">{{ selectedQuestion.user_email }}</a>)
                 </span>
               </span>
-              <span 
+              <span
                 class="px-2 py-0.2 rounded-full text-[9px] font-extrabold"
                 :class="selectedQuestion.question_type === 'document' ? 'bg-lightTeal/15 text-darkTeal' : (selectedQuestion.question_type === 'inquiry' ? 'bg-purple-100 text-purple-800' : 'bg-indigo-50 text-indigo-700')"
               >
-                {{ selectedQuestion.question_type === 'document' ? 'Document Policy' : (selectedQuestion.question_type === 'inquiry' ? 'Widget Direct Inquiry' : 'General Knowledge') }}
+                {{ selectedQuestion.question_type === 'document' ? $t('admin.typeDocument') : (selectedQuestion.question_type === 'inquiry' ? $t('admin.typeInquiry') : $t('admin.typeGeneral')) }}
               </span>
             </div>
             <div class="text-xs font-bold text-slate-900 leading-relaxed whitespace-pre-wrap">
@@ -451,29 +451,29 @@
           <div class="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs">
             <div class="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
               <span class="flex items-center gap-1 text-darkTeal">
-                <i class="mdi mdi-robot-outline"></i> {{ selectedQuestion.question_type === 'inquiry' ? 'Inquiry Routing & Notes' : 'AI Generated Response' }}
+                <i class="mdi mdi-robot-outline"></i> {{ selectedQuestion.question_type === 'inquiry' ? $t('admin.inquiryRouting') : $t('admin.aiResponseLabel') }}
               </span>
               <span v-if="selectedQuestion.source" class="text-slate-500 font-semibold truncate max-w-[200px]">
-                Src: {{ selectedQuestion.source }}
+                {{ $t('admin.src') }} {{ selectedQuestion.source }}
               </span>
             </div>
             <div class="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto p-1 bg-slate-50/50 rounded-lg">
-              {{ selectedQuestion.ai_response || (selectedQuestion.question_type === 'inquiry' ? 'Direct Admin Inquiry submitted from the chat widget. Pending admin review and response below.' : 'No AI response generated.') }}
+              {{ selectedQuestion.ai_response || (selectedQuestion.question_type === 'inquiry' ? $t('admin.inquiryFallback') : $t('admin.noAiResponse')) }}
             </div>
           </div>
 
           <!-- Admin Response Input Box -->
           <div class="space-y-2">
             <label class="block text-xs font-bold text-slate-800">
-              Official Admin Response / Notes:
+              {{ $t('admin.adminResponseLabel') }}
             </label>
             <p class="text-[10px] text-slate-400">
-              Provide policy clarifications, HR decisions, or revised answers. This will be visible to the user in their chat session.
+              {{ $t('admin.adminResponseHelp') }}
             </p>
-            <textarea 
+            <textarea
               v-model="editAdminResponse"
               rows="4"
-              placeholder="Type official admin response, policy clarification, or review notes here..."
+              :placeholder="$t('admin.adminResponsePlaceholder')"
               class="w-full p-3 bg-slate-50 border border-gray-300 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-darkTeal focus:bg-white transition-all font-medium"
             ></textarea>
           </div>
@@ -481,18 +481,18 @@
           <!-- Status Selector -->
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/80 p-3 rounded-xl border border-gray-200">
             <div>
-              <label class="block text-xs font-bold text-slate-800">Update Question Status</label>
-              <span class="text-[10px] text-slate-400">Set the resolution state for this question</span>
+              <label class="block text-xs font-bold text-slate-800">{{ $t('admin.updateStatus') }}</label>
+              <span class="text-[10px] text-slate-400">{{ $t('admin.updateStatusHelp') }}</span>
             </div>
-            <select 
+            <select
               v-model="editStatus"
               class="bg-white border border-gray-300 rounded-xl py-2 px-3 text-xs font-bold text-slate-700 focus:outline-none focus:border-darkTeal cursor-pointer"
             >
-              <option value="new">New</option>
-              <option value="ai_answered">AI Answered</option>
-              <option value="needs_review">Needs Review</option>
-              <option value="admin_answered">Admin Answered</option>
-              <option value="resolved">Resolved</option>
+              <option value="new">{{ $t('admin.statusNew') }}</option>
+              <option value="ai_answered">{{ $t('admin.statusAiAnswered') }}</option>
+              <option value="needs_review">{{ $t('admin.statusNeedsReview') }}</option>
+              <option value="admin_answered">{{ $t('admin.statusAdminAnswered') }}</option>
+              <option value="resolved">{{ $t('admin.statusResolved') }}</option>
             </select>
           </div>
         </div>
@@ -503,22 +503,22 @@
           <div class="flex items-center gap-1.5 flex-wrap">
             <button 
               class="py-1.5 px-2 rounded-lg border border-red-200 hover:border-red-400 bg-white hover:bg-red-50 text-red-600 font-bold text-[10px] transition-colors cursor-pointer flex items-center gap-1"
-              title="Delete this query permanently"
+              :title="$t('admin.deleteQueryPermanent')"
               @click="promptDeleteQuery(selectedQuestion)"
             >
-              <i class="mdi mdi-delete-outline text-xs"></i> Delete
+              <i class="mdi mdi-delete-outline text-xs"></i> {{ $t('common.delete') }}
             </button>
-            <button 
+            <button
               class="py-1.5 px-2.5 rounded-lg border border-amber-300 bg-amber-50 text-amber-800 font-bold text-[10px] hover:bg-amber-100 transition-colors cursor-pointer"
               @click="editStatus = 'needs_review'"
             >
-              <i class="mdi mdi-alert-circle-outline mr-0.5"></i> Flag Review
+              <i class="mdi mdi-alert-circle-outline mr-0.5"></i> {{ $t('admin.flagReview') }}
             </button>
-            <button 
+            <button
               class="py-1.5 px-2.5 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-800 font-bold text-[10px] hover:bg-emerald-100 transition-colors cursor-pointer"
               @click="editStatus = 'resolved'"
             >
-              <i class="mdi mdi-check-circle-outline mr-0.5"></i> Mark Resolved
+              <i class="mdi mdi-check-circle-outline mr-0.5"></i> {{ $t('admin.markResolved') }}
             </button>
           </div>
 
@@ -528,15 +528,15 @@
               class="py-2 px-3 rounded-xl text-slate-600 hover:text-slate-800 hover:bg-slate-200 text-xs font-bold transition-colors cursor-pointer"
               @click="selectedQuestion = null"
             >
-              Cancel
+              {{ $t('common.cancel') }}
             </button>
-            <button 
+            <button
               class="py-2 px-4 rounded-xl bg-gradient-to-r from-lightTeal to-darkTeal hover:from-darkTeal hover:to-lightTeal text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
               :disabled="isSaving"
               @click="saveQuestionReview"
             >
               <i class="mdi mdi-content-save-outline" :class="{ 'mdi-spin': isSaving }"></i>
-              <span>Save & Update</span>
+              <span>{{ $t('admin.saveUpdate') }}</span>
             </button>
           </div>
         </div>
@@ -558,13 +558,13 @@
                 <i class="mdi mdi-chat-outline"></i>
               </span>
               <h3 class="text-sm font-black font-heading text-slate-900">
-                {{ selectedSessionDetail.session?.title || 'Session Conversation' }}
+                {{ selectedSessionDetail.session?.title || $t('admin.sessionConversation') }}
               </h3>
             </div>
             <div class="text-[10px] text-slate-500 mt-0.5 flex items-center gap-2">
-              <span>Session ID: <strong class="font-mono">{{ selectedSessionDetail.session?.id }}</strong></span>
+              <span>{{ $t('admin.sessionId') }} <strong class="font-mono">{{ selectedSessionDetail.session?.id }}</strong></span>
               <span>•</span>
-              <span>{{ selectedSessionDetail.questions?.length || 0 }} Questions Recorded</span>
+              <span>{{ $t('admin.questionsRecorded', { n: selectedSessionDetail.questions?.length || 0 }) }}</span>
             </div>
           </div>
           <button 
@@ -581,7 +581,7 @@
             v-if="!selectedSessionDetail.questions || selectedSessionDetail.questions.length === 0" 
             class="py-12 text-center text-slate-400 text-xs"
           >
-            No questions recorded in this session.
+            {{ $t('admin.noQuestionsRecorded') }}
           </div>
 
           <div 
@@ -598,7 +598,7 @@
                   class="px-2 py-0.2 rounded-full font-extrabold"
                   :class="q.question_type === 'document' ? 'bg-lightTeal/15 text-darkTeal' : 'bg-indigo-50 text-indigo-700'"
                 >
-                  {{ q.question_type === 'document' ? 'Document' : 'General' }}
+                  {{ q.question_type === 'document' ? $t('admin.typeDocumentShort') : $t('admin.typeGeneralShort') }}
                 </span>
                 <span 
                   class="px-2 py-0.2 rounded-full font-bold uppercase tracking-wider text-[8px]"
@@ -612,7 +612,7 @@
                 @click="openQuestionReview(q)"
               >
                 <i class="mdi mdi-pencil text-xs"></i>
-                <span>Review / Edit</span>
+                <span>{{ $t('admin.reviewEdit') }}</span>
               </button>
             </div>
 
@@ -632,9 +632,9 @@
                 <i class="mdi mdi-robot-outline"></i>
               </div>
               <div class="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap flex-1">
-                {{ q.ai_response || 'No AI response.' }}
+                {{ q.ai_response || $t('admin.noAiResponseShort') }}
                 <div v-if="q.source" class="mt-2 text-[9px] font-semibold text-slate-400">
-                  <i class="mdi mdi-file-document-outline"></i> Source: {{ q.source }}
+                  <i class="mdi mdi-file-document-outline"></i> {{ $t('admin.sourceLabel') }} {{ q.source }}
                 </div>
               </div>
             </div>
@@ -645,7 +645,7 @@
                 <i class="mdi mdi-shield-check"></i>
               </div>
               <div class="flex-1">
-                <span class="text-[10px] font-black text-emerald-800 uppercase tracking-wider block mb-0.5">Admin Response</span>
+                <span class="text-[10px] font-black text-emerald-800 uppercase tracking-wider block mb-0.5">{{ $t('admin.adminResponse') }}</span>
                 <div class="text-xs text-emerald-950 font-medium whitespace-pre-wrap leading-relaxed">
                   {{ q.admin_response }}
                 </div>
@@ -658,17 +658,17 @@
         <div class="p-4 border-t border-gray-200 flex items-center justify-between bg-slate-50/60">
           <button 
             class="py-1.5 px-3 rounded-xl border border-red-200 hover:border-red-400 bg-white hover:bg-red-50 text-red-600 font-bold text-xs transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
-            title="Delete this chat session permanently"
+            :title="$t('admin.deleteSessionPermanent')"
             @click="promptDeleteSession(selectedSessionDetail.session)"
           >
             <i class="mdi mdi-delete-outline text-sm"></i>
-            <span>Delete Session</span>
+            <span>{{ $t('admin.deleteSession') }}</span>
           </button>
-          <button 
+          <button
             class="py-2 px-4 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
             @click="selectedSessionDetail = null"
           >
-            Close
+            {{ $t('common.close') }}
           </button>
         </div>
       </div>
@@ -687,14 +687,14 @@
           </div>
           <div class="flex-1 min-w-0">
             <h3 class="text-sm font-black font-heading text-slate-900">
-              {{ deleteModal.type === 'query' ? 'Delete HR Query' : 'Delete Chat Session' }}
+              {{ deleteModal.type === 'query' ? $t('admin.deleteQueryHeading') : $t('admin.deleteSessionHeading') }}
             </h3>
             <p class="text-xs text-slate-600 mt-1 leading-relaxed">
               <template v-if="deleteModal.type === 'query'">
-                Are you sure you want to delete this query? This inquiry and its conversation history will be permanently deleted.
+                {{ $t('admin.deleteQueryBody') }}
               </template>
               <template v-else>
-                Are you sure you want to delete this chat session? All messages and questions in this session will be permanently removed.
+                {{ $t('admin.deleteSessionBody') }}
               </template>
             </p>
             <div v-if="deleteModal.item" class="mt-3 p-2.5 rounded-xl bg-slate-50 border border-gray-100 text-[11px] text-slate-500 font-mono truncate">
@@ -715,16 +715,16 @@
             :disabled="deleteModal.isDeleting"
             @click="deleteModal.isOpen = false"
           >
-            Cancel
+            {{ $t('common.cancel') }}
           </button>
-          <button 
+          <button
             class="py-2 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
             :disabled="deleteModal.isDeleting"
             @click="executeDelete"
           >
             <i class="mdi mdi-loading mdi-spin" v-if="deleteModal.isDeleting"></i>
             <i class="mdi mdi-delete-outline" v-else></i>
-            <span>{{ deleteModal.isDeleting ? 'Deleting...' : 'Confirm Delete' }}</span>
+            <span>{{ deleteModal.isDeleting ? $t('common.deleting') : $t('common.confirmDelete') }}</span>
           </button>
         </div>
       </div>
@@ -735,6 +735,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { 
   getAdminAnalytics, 
   getAdminQuestions, 
@@ -744,6 +745,8 @@ import {
   deleteAdminQuestion,
   deleteAdminSession
 } from '../../api/client'
+
+const { t } = useI18n()
 
 defineEmits(['backToChat'])
 
@@ -902,7 +905,7 @@ async function saveQuestionReview() {
 
     selectedQuestion.value = null
   } catch (err) {
-    alert(`Could not save review: ${err.message}`)
+    alert(t('admin.saveReviewError', { msg: err.message }))
   } finally {
     isSaving.value = false
   }
@@ -913,7 +916,7 @@ async function viewSessionConversation(sessionId) {
     const data = await getAdminSessionDetail(sessionId)
     selectedSessionDetail.value = data
   } catch (err) {
-    alert(`Could not load session details: ${err.message}`)
+    alert(t('admin.loadSessionError', { msg: err.message }))
   }
 }
 
@@ -966,7 +969,7 @@ async function executeDelete() {
     await fetchAnalytics()
     deleteModal.value.isOpen = false
   } catch (err) {
-    alert(`Could not delete: ${err.message}`)
+    alert(t('admin.deleteError', { msg: err.message }))
   } finally {
     deleteModal.value.isDeleting = false
   }
@@ -990,12 +993,12 @@ function getStatusBadgeClass(status) {
 
 function formatStatusLabel(status) {
   switch (status) {
-    case 'resolved': return 'Resolved'
-    case 'admin_answered': return 'Admin Answered'
-    case 'needs_review': return 'Needs Review'
-    case 'new': return 'New'
+    case 'resolved': return t('admin.statusResolved')
+    case 'admin_answered': return t('admin.statusAdminAnswered')
+    case 'needs_review': return t('admin.statusNeedsReview')
+    case 'new': return t('admin.statusNew')
     case 'ai_answered':
-    default: return 'AI Answered'
+    default: return t('admin.statusAiAnswered')
   }
 }
 

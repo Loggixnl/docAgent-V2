@@ -7,7 +7,7 @@
     <div class="modal w-full max-w-3xl bg-white border border-gray-200 rounded-2xl p-6 flex flex-col gap-5 shadow-2xl max-h-[85vh]">
       <div class="flex items-center justify-between border-b border-gray-100 pb-4">
         <h3 class="text-sm font-bold text-slate-900 font-heading truncate max-w-[80%]">
-          Analysis: {{ filename }}
+          {{ $t('analysis.heading', { filename }) }}
         </h3>
         <button class="text-xl text-slate-400 hover:text-slate-900 cursor-pointer" @click="close">&times;</button>
       </div>
@@ -16,7 +16,7 @@
         <!-- Loading State -->
         <div v-if="isLoading" class="flex flex-col items-center justify-center py-16 text-slate-400 gap-3">
           <i class="mdi mdi-loading mdi-spin text-3xl text-darkTeal"></i>
-          <p class="text-xs font-semibold">Generating summary report...</p>
+          <p class="text-xs font-semibold">{{ $t('analysis.loading') }}</p>
         </div>
 
         <!-- Rendered Report -->
@@ -28,7 +28,7 @@
           class="px-5 py-2 text-xs font-bold rounded-full bg-darkTeal text-white shadow-md hover:bg-darkTeal/90 transition-all cursor-pointer"
           @click="close"
         >
-          Close Report
+          {{ $t('analysis.closeReport') }}
         </button>
       </div>
     </div>

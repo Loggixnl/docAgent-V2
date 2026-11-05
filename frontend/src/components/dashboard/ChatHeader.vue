@@ -2,9 +2,9 @@
   <header class="py-2.5 sm:py-3 px-3 sm:px-6 border-b border-gray-200 flex items-center justify-between bg-slate-50/50 gap-2 shrink-0">
     <div class="flex items-center gap-2 sm:gap-3 min-w-0">
       <!-- Mobile Sidebar Toggle Button -->
-      <button 
+      <button
         class="lg:hidden w-8.5 h-8.5 rounded-xl flex items-center justify-center bg-slate-100 border border-gray-200 text-slate-700 hover:bg-slate-200 text-base shrink-0 cursor-pointer"
-        title="Open drawer"
+        :title="$t('header.openDrawer')"
         @click="$emit('toggleSidebar')"
       >
         <i class="mdi mdi-menu text-darkTeal"></i>
@@ -18,32 +18,32 @@
       <div class="min-w-0">
         <div class="flex items-center gap-2">
           <h2 class="text-xs sm:text-sm font-bold text-slate-900 truncate">
-            {{ isDashboardView ? 'Admin Management Dashboard' : (activeSessionTitle || 'New Chat') }}
+            {{ titleText }}
           </h2>
           <!-- New Chat quick button in header -->
-          <button 
+          <button
             v-if="!isDashboardView"
             class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-lightTeal/10 hover:bg-lightTeal/20 text-darkTeal text-[10px] font-bold transition-colors cursor-pointer"
-            title="Start a new chat session"
+            :title="$t('header.newChatTitle')"
             @click="$emit('newChat')"
           >
             <i class="mdi mdi-plus text-xs"></i>
-            <span>New Chat</span>
+            <span>{{ $t('common.newChat') }}</span>
           </button>
         </div>
 
         <div class="flex items-center gap-1.5 mt-0.5">
-          <span 
-            v-if="!isDashboardView" 
+          <span
+            v-if="!isDashboardView"
             class="text-[8px] sm:text-[9px] text-limeGreen bg-limeGreen/10 px-1.5 sm:px-2 py-0.2 rounded-full font-extrabold uppercase tracking-wider"
           >
-            Session Active
+            {{ $t('header.sessionActive') }}
           </span>
-          <span 
+          <span
             v-else
             class="text-[8px] sm:text-[9px] text-darkTeal bg-lightTeal/15 px-1.5 sm:px-2 py-0.2 rounded-full font-extrabold uppercase tracking-wider"
           >
-            Analytics & Reviews
+            {{ $t('header.analytics') }}
           </span>
         </div>
       </div>
@@ -51,17 +51,20 @@
 
     <!-- Right Actions -->
     <div class="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+      <!-- Language Switcher -->
+      <LanguageSwitcher />
+
       <!-- Admin Dashboard / Chat Toggle Button -->
-      <button 
+      <button
         class="py-1.5 px-2.5 sm:px-3 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
-        :class="isDashboardView 
-          ? 'bg-gradient-to-r from-lightTeal to-darkTeal text-white border-transparent hover:opacity-95' 
+        :class="isDashboardView
+          ? 'bg-gradient-to-r from-lightTeal to-darkTeal text-white border-transparent hover:opacity-95'
           : 'bg-white border-slate-300 text-slate-700 hover:text-darkTeal hover:border-darkTeal/40'"
-        :title="isDashboardView ? 'Switch to Chat Assistant' : 'Switch to Admin Question Management Dashboard'"
+        :title="isDashboardView ? $t('header.switchToChat') : $t('header.switchToAdmin')"
         @click="$emit('toggleView')"
       >
         <i :class="isDashboardView ? 'mdi mdi-chat-outline' : 'mdi mdi-view-dashboard-outline'"></i>
-        <span class="hidden sm:inline">{{ isDashboardView ? 'Back to Chat' : 'Admin Dashboard' }}</span>
+        <span class="hidden sm:inline">{{ isDashboardView ? $t('header.backToChat') : $t('header.adminDashboard') }}</span>
       </button>
 
       <!-- User Profile Badge (hidden on mobile, visible from md) -->
@@ -73,25 +76,25 @@
 
 
       <!-- Action Buttons -->
-      <button 
+      <button
         class="w-8 h-8 rounded-xl flex items-center justify-center bg-slate-100 border border-gray-200 text-slate-600 hover:text-slate-900 hover:bg-slate-200 hover:border-gray-400 transition-all text-sm cursor-pointer shrink-0"
-        title="Integrate Chatbot Widget"
+        :title="$t('header.integrate')"
         @click="$emit('openWidget')"
       >
         <i class="mdi mdi-code-tags"></i>
       </button>
 
-      <button 
+      <button
         class="w-8 h-8 rounded-xl flex items-center justify-center bg-slate-100 border border-gray-200 text-slate-600 hover:text-slate-900 hover:bg-slate-200 hover:border-gray-400 transition-all text-sm cursor-pointer shrink-0"
-        title="Settings"
+        :title="$t('header.settings')"
         @click="$emit('openSettings')"
       >
         <i class="mdi mdi-cog-outline"></i>
       </button>
 
-      <button 
+      <button
         class="w-8 h-8 rounded-xl flex items-center justify-center bg-slate-100 border border-gray-200 text-slate-600 hover:text-coralOrange hover:bg-coralOrange/10 hover:border-coralOrange/30 transition-all text-sm cursor-pointer shrink-0"
-        title="Sign Out"
+        :title="$t('header.signOut')"
         @click="$emit('logout')"
       >
         <i class="mdi mdi-logout"></i>
@@ -101,10 +104,15 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuth } from '../../composables/useAuth'
 import { useChat } from '../../composables/useChat'
+import LanguageSwitcher from '../common/LanguageSwitcher.vue'
 
-defineProps({
+const { t } = useI18n()
+
+const props = defineProps({
   isDashboardView: {
     type: Boolean,
     default: false
@@ -115,5 +123,11 @@ defineEmits(['openWidget', 'openSettings', 'logout', 'toggleSidebar', 'toggleVie
 
 const { username } = useAuth()
 const { activeSessionTitle } = useChat()
-</script>
 
+const titleText = computed(() => {
+  if (props.isDashboardView) return t('header.adminTitle')
+  const raw = activeSessionTitle.value
+  if (!raw || raw === 'New Chat') return t('common.newChat')
+  return raw
+})
+</script>

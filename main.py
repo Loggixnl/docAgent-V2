@@ -14,6 +14,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 
 import config
+import backend_i18n
 from vector_store import VectorStore
 import document_processor
 import ai_agent
@@ -92,6 +93,7 @@ class ChatRequest(BaseModel):
     session_id: Optional[str] = None
     save_session: Optional[bool] = True
     base_url: Optional[str] = None
+    lang: Optional[str] = "en"  # en | nl
 
 class SettingsRequest(BaseModel):
     api_key: Optional[str] = ""
@@ -106,13 +108,15 @@ class SettingsRequest(BaseModel):
 
 class AuthRequest(BaseModel):
     email: str
-    password: str
+    password: str = ""
+    lang: Optional[str] = "en"  # en | nl
 
 class RegisterRequest(BaseModel):
     email: str
     password: str
     confirm_password: str
     first_name: str = ""
+    lang: Optional[str] = "en"  # en | nl
 
 class AdminQuestionUpdate(BaseModel):
     status: Optional[str] = None
@@ -123,6 +127,7 @@ class WidgetInquiryRequest(BaseModel):
     email: str
     title: str
     description: str
+    lang: Optional[str] = "en"  # en | nl
 
 # Password hashing helpers
 def hash_password(password: str) -> str:
@@ -247,30 +252,31 @@ def register_user(request: RegisterRequest):
     password = request.password
     confirm_password = request.confirm_password
     first_name = request.first_name.strip()
+    lang = backend_i18n.normalize_lang(request.lang)
     
     if not is_valid_email(email):
-        raise HTTPException(status_code=400, detail="Invalid email address format.")
+        raise HTTPException(status_code=400, detail=backend_i18n.msg(lang, "auth.invalid_email"))
         
     if len(password) < 4:
-        raise HTTPException(status_code=400, detail="Password must be at least 4 characters long.")
+        raise HTTPException(status_code=400, detail=backend_i18n.msg(lang, "auth.password_short"))
         
     if password != confirm_password:
-        raise HTTPException(status_code=400, detail="Passwords do not match.")
+        raise HTTPException(status_code=400, detail=backend_i18n.msg(lang, "auth.password_mismatch"))
         
     existing_user = vector_db.get_user_by_email(email)
     if existing_user:
         if existing_user.get("email_verified"):
-            raise HTTPException(status_code=400, detail="This email is already registered. Please log in.")
+            raise HTTPException(status_code=400, detail=backend_i18n.msg(lang, "auth.already_registered"))
         # Legacy unverified account (created before deferred signup): refresh and resend
         verify_token = secrets.token_urlsafe(32)
         token_expires = (datetime.now() + timedelta(hours=24)).isoformat()
         vector_db.set_user_verification_token(email, verify_token, token_expires)
-        email_service.send_verification_email(email, verify_token, existing_user.get("first_name", ""))
+        email_service.send_verification_email(email, verify_token, existing_user.get("first_name", ""), lang)
         return {
             "success": True,
             "email": email,
             "requires_verification": True,
-            "message": "This email is awaiting verification. A new verification email has been sent."
+            "message": backend_i18n.msg(lang, "auth.pending_resent")
         }
 
     pending = vector_db.get_pending_registration(email)
@@ -280,12 +286,12 @@ def register_user(request: RegisterRequest):
     if pending:
         # Signup already awaiting verification: refresh the token and resend
         vector_db.set_pending_verification_token(email, verify_token, token_expires)
-        email_service.send_verification_email(email, verify_token, pending.get("first_name", ""))
+        email_service.send_verification_email(email, verify_token, pending.get("first_name", ""), lang)
         return {
             "success": True,
             "email": email,
             "requires_verification": True,
-            "message": "This signup is awaiting email verification. A new verification email has been sent."
+            "message": backend_i18n.msg(lang, "auth.pending_resent_signup")
         }
 
     user_id = str(uuid.uuid4())
@@ -300,21 +306,25 @@ def register_user(request: RegisterRequest):
             password_hash, verify_token, token_expires
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to create signup request: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=backend_i18n.msg(lang, "auth.signup_failed", error=str(e))
+        )
 
-    email_service.send_verification_email(email, verify_token, first_name)
+    email_service.send_verification_email(email, verify_token, first_name, lang)
 
     return {
         "success": True,
         "email": email,
         "requires_verification": True,
-        "message": "Almost done! Please check your email and verify your account to activate it."
+        "message": backend_i18n.msg(lang, "auth.almost_done")
     }
 
 @app.post("/api/auth/login")
 def login_user(request: AuthRequest):
     email = request.email.strip().lower()
     password = request.password
+    lang = backend_i18n.normalize_lang(request.lang)
     
     user = vector_db.get_user_by_email(email)
     if not user:
@@ -322,17 +332,17 @@ def login_user(request: AuthRequest):
         if vector_db.get_pending_registration(email):
             raise HTTPException(
                 status_code=403,
-                detail="Email not verified. Please check your inbox for the verification link, or resend it."
+                detail=backend_i18n.msg(lang, "auth.not_verified")
             )
-        raise HTTPException(status_code=401, detail="Invalid email or password.")
+        raise HTTPException(status_code=401, detail=backend_i18n.msg(lang, "auth.invalid_credentials"))
 
     if not verify_password(password, user["password_hash"]):
-        raise HTTPException(status_code=401, detail="Invalid email or password.")
+        raise HTTPException(status_code=401, detail=backend_i18n.msg(lang, "auth.invalid_credentials"))
 
     if not user.get("email_verified"):
         raise HTTPException(
             status_code=403,
-            detail="Email not verified. Please check your inbox for the verification link, or resend it."
+            detail=backend_i18n.msg(lang, "auth.not_verified")
         )
 
     token = secrets.token_hex(24)
@@ -347,8 +357,23 @@ def login_user(request: AuthRequest):
     }
 
 @app.get("/api/auth/verify-email")
-def verify_email(token: str):
-    """Verify an email address from the link in the verification email."""
+def verify_email(request: Request, token: str, lang: str = "en"):
+    """Verify an email address from the link in the verification email.
+
+    Returns JSON when the caller sends Accept: application/json (the frontend SPA),
+    otherwise renders a simple server-side HTML page for direct browser hits.
+    """
+    lang = backend_i18n.normalize_lang(lang)
+    wants_json = "application/json" in (request.headers.get("accept") or "")
+
+    def fail(message: str):
+        if wants_json:
+            return JSONResponse(
+                {"success": False, "message": message, "lang": lang},
+                status_code=400,
+            )
+        return _verification_page(False, message, lang=lang)
+
     try:
         # Normal path: promote a pending signup to a real account
         user = vector_db.promote_pending_registration(token)
@@ -356,26 +381,37 @@ def verify_email(token: str):
         if not user:
             user = vector_db.verify_user_by_token(token)
     except ValueError as e:
-        return _verification_page(False, str(e))
+        # Localize the hardcoded expiry error from the DB layer
+        message = (
+            backend_i18n.msg(lang, "verify.expired")
+            if "expired" in str(e).lower()
+            else str(e)
+        )
+        return fail(message)
 
     if not user:
-        return _verification_page(False, "Invalid or already-used verification link.")
+        return fail(backend_i18n.msg(lang, "verify.invalid_link"))
 
+    message = backend_i18n.msg(lang, "verify.success_message")
+    if wants_json:
+        return {"success": True, "message": message, "lang": lang}
     return _verification_page(
         True,
-        "Your email has been verified! You can now log in to your account.",
-        login_url=f"{config.APP_FRONTEND_URL}/"
+        message,
+        login_url=f"{config.APP_FRONTEND_URL}/?lang={lang}",
+        lang=lang,
     )
 
 @app.post("/api/auth/resend-verification")
 def resend_verification(request: AuthRequest):
     """Resend the verification email for an existing unverified account."""
     email = request.email.strip().lower()
+    lang = backend_i18n.normalize_lang(request.lang)
 
     # Return the same response whether the account exists or not, to avoid email enumeration.
     generic_response = {
         "success": True,
-        "message": "If an unverified account exists for this email, a verification link has been sent."
+        "message": backend_i18n.msg(lang, "auth.resend_generic")
     }
 
     # Signup awaiting verification (no users row yet)
@@ -384,7 +420,7 @@ def resend_verification(request: AuthRequest):
         verify_token = secrets.token_urlsafe(32)
         token_expires = (datetime.now() + timedelta(hours=24)).isoformat()
         vector_db.set_pending_verification_token(email, verify_token, token_expires)
-        email_service.send_verification_email(email, verify_token, pending.get("first_name", ""))
+        email_service.send_verification_email(email, verify_token, pending.get("first_name", ""), lang)
         return generic_response
 
     # Legacy unverified users row
@@ -395,32 +431,37 @@ def resend_verification(request: AuthRequest):
     verify_token = secrets.token_urlsafe(32)
     token_expires = (datetime.now() + timedelta(hours=24)).isoformat()
     vector_db.set_user_verification_token(email, verify_token, token_expires)
-    email_service.send_verification_email(email, verify_token, user.get("first_name", ""))
+    email_service.send_verification_email(email, verify_token, user.get("first_name", ""), lang)
 
     return generic_response
 
-def _verification_page(success: bool, message: str, login_url: str = None) -> HTMLResponse:
+def _verification_page(success: bool, message: str, login_url: str = None, lang: str = "en") -> HTMLResponse:
     """Render a simple server-side HTML page for the email verification link."""
+    lang = backend_i18n.normalize_lang(lang)
     if success:
         icon = "✓"
         icon_bg = "#0d9488"
         action = (
-            f'<a href="{login_url}" style="background:#0d9488;color:#fff;padding:12px 28px;border-radius:999px;text-decoration:none;font-weight:bold;font-size:14px;display:inline-block;">Go to Login</a>'
+            f'<a href="{login_url}" style="background:#0d9488;color:#fff;padding:12px 28px;border-radius:999px;text-decoration:none;font-weight:bold;font-size:14px;display:inline-block;">'
+            f'{backend_i18n.msg(lang, "verify.go_to_login")}</a>'
             if login_url else ""
         )
     else:
         icon = "!"
         icon_bg = "#dc2626"
         action = (
-            f'<p style="font-size:13px;color:#64748b;">Return to the app and use <strong>"Resend verification email"</strong> to get a new link.</p>'
+            f'<p style="font-size:13px;color:#64748b;">{backend_i18n.msg(lang, "verify.resend_hint")}</p>'
         )
 
+    heading = backend_i18n.msg(lang, "verify.success_heading" if success else "verify.failure_heading")
+    page_title = backend_i18n.msg(lang, "verify.title")
+
     html = f"""<!DOCTYPE html>
-<html lang="en">
+<html lang="{lang}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Email Verification - DocAgent AI</title>
+  <title>{page_title}</title>
   <style>
     body {{ font-family: Arial, sans-serif; background: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }}
     .card {{ background: #fff; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.08); padding: 48px 40px; max-width: 440px; text-align: center; }}
@@ -433,7 +474,7 @@ def _verification_page(success: bool, message: str, login_url: str = None) -> HT
 <body>
   <div class="card">
     <div class="icon">{icon}</div>
-    <h1>{"Email Verified" if success else "Verification Failed"}</h1>
+    <h1>{heading}</h1>
     <p>{message}</p>
     <div class="action">{action}</div>
   </div>
@@ -818,11 +859,12 @@ async def chat_with_agent(
     """
     query = request.query
     history = [h.dict() for h in request.chat_history] if request.chat_history else []
+    lang = backend_i18n.normalize_lang(request.lang)
     
     # 1. Validate chatbot_id
     chatbot_id = request.chatbot_id
     if not chatbot_id or not vector_db.validate_chatbot_id(chatbot_id):
-        raise HTTPException(status_code=404, detail="Chatbot instance not found.")
+        raise HTTPException(status_code=404, detail=backend_i18n.msg(lang, "widget.chatbot_not_found"))
         
     # 2. Resolve API key, provider, base_url, model
     user_info = vector_db.get_user_by_chatbot_id(chatbot_id)
@@ -851,7 +893,7 @@ async def chat_with_agent(
     if not resolved_api_key and not (requested_provider in ("generic", "custom") and resolved_base_url):
         raise HTTPException(
             status_code=400,
-            detail=f"AI API key is not configured on the server. Please set an API key in the server .env file."
+            detail=backend_i18n.msg(lang, "chat.api_key_missing")
         )
 
     # 3. Resolve user_id from auth token
@@ -882,7 +924,7 @@ async def chat_with_agent(
 
     try:
         # 5. Check if query is a simple greeting or pleasantry
-        pleasantry = ai_agent.check_conversational_pleasantry(query)
+        pleasantry = ai_agent.check_conversational_pleasantry(query, lang=lang)
         if pleasantry:
             question_type = "general"
         else:
@@ -913,10 +955,7 @@ async def chat_with_agent(
             # Check if any documents exist for this chatbot
             docs = vector_db.get_documents(chatbot_id=chatbot_id)
             if not docs:
-                answer = (
-                    "No documents have been uploaded yet. Please upload your documents first so I can "
-                    "answer questions based strictly on their content."
-                )
+                answer = backend_i18n.msg(lang, "chat.no_documents")
                 context = []
                 source_info = ""
             else:
@@ -926,10 +965,7 @@ async def chat_with_agent(
 
                 max_score = max((m.get("score", 0.0) for m in matches), default=0.0)
                 if not matches or max_score <= 0.0:
-                    answer = (
-                        "I couldn't find a relevant answer to your query"
-                        "Please contact the Administration or Support team for further assistance."
-                    )
+                    answer = backend_i18n.msg(lang, "chat.refusal")
                     context = []
                     source_info = ""
                 else:
@@ -940,13 +976,18 @@ async def chat_with_agent(
                         model_name=requested_model,
                         chat_history=history,
                         provider=requested_provider,
-                        base_url=resolved_base_url
+                        base_url=resolved_base_url,
+                        lang=lang
                     )
                     # If answer indicates information wasn't found in documents, clear context citations
+                    answer_lower = answer.lower()
                     if (
-                        "couldn't find anything" in answer.lower()
-                        or "raise your query to administration" in answer.lower()
-                        or "cannot find this information" in answer.lower()
+                        "couldn't find anything" in answer_lower
+                        or "raise your query to administration" in answer_lower
+                        or "cannot find this information" in answer_lower
+                        or "kon niets vinden" in answer_lower
+                        or "niets vinden voor je vraag" in answer_lower
+                        or "voorleggen aan beheer" in answer_lower
                     ):
                         context = []
                         source_info = ""
@@ -973,7 +1014,8 @@ async def chat_with_agent(
                         api_key=resolved_api_key,
                         model_name=requested_model,
                         provider=requested_provider,
-                        base_url=resolved_base_url
+                        base_url=resolved_base_url,
+                        lang=lang
                     )
                     vector_db.update_chat_session_title(chat_session_id, title)
                 except Exception:
@@ -1152,20 +1194,21 @@ def submit_widget_inquiry(request: WidgetInquiryRequest):
     Captures email, title, and description from website users when policy info is insufficient.
     """
     chatbot_id = request.chatbot_id
+    lang = backend_i18n.normalize_lang(request.lang)
     if not chatbot_id or not vector_db.validate_chatbot_id(chatbot_id):
-        raise HTTPException(status_code=404, detail="Chatbot instance not found.")
+        raise HTTPException(status_code=404, detail=backend_i18n.msg(lang, "widget.chatbot_not_found"))
 
     email = request.email.strip()
     if not email or not is_valid_email(email):
-        raise HTTPException(status_code=400, detail="Please provide a valid email address.")
+        raise HTTPException(status_code=400, detail=backend_i18n.msg(lang, "auth.invalid_email"))
 
     title = request.title.strip()
     if not title:
-        raise HTTPException(status_code=400, detail="Please provide a title for your inquiry.")
+        raise HTTPException(status_code=400, detail=backend_i18n.msg(lang, "widget.title_required"))
 
     description = request.description.strip()
     if not description:
-        raise HTTPException(status_code=400, detail="Please provide a description for your inquiry.")
+        raise HTTPException(status_code=400, detail=backend_i18n.msg(lang, "widget.description_required"))
 
     try:
         result = vector_db.add_widget_inquiry(
@@ -1181,7 +1224,10 @@ def submit_widget_inquiry(request: WidgetInquiryRequest):
             "session_id": result["session_id"]
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to submit inquiry: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=backend_i18n.msg(lang, "widget.submit_failed", error=str(e))
+        )
 
 # ============================================================
 # Serve Frontend & Static Assets
