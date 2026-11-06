@@ -81,10 +81,10 @@ MESSAGES = {
     "verify.expired": "This verification link has expired. Please request a new one.",
         # --- Chat ---
         "chat.greeting": (
-            "Hello! I am **DocAgent AI**, your dedicated document knowledge base assistant. "
-            "I can answer questions based strictly on your uploaded documents.\n\n"
-            "Please ask any question about your uploaded documents, and I will be happy to find the answer for you."
-        ),
+    "Hey there! 👋 I'm **DocAgent AI**. "
+    "I'm here to make things easier by helping you find answers and get the information you need.\n\n"
+    "Feel free to ask me anything!"
+),
         "chat.identity": (
             "I am **DocAgent AI**, a specialized Knowledge Base AI Assistant. "
             "My role is to answer questions strictly and solely from the documents you upload.\n\n"
