@@ -324,7 +324,7 @@ const activeChatbotId = computed(() => chatbotId.value || 'cb_d778e9e0b662')
 const copiedEmbed = ref(false)
 const copiedConsole = ref(false)
 
-const WIDGET_VERSION = '1.1.3'
+const WIDGET_VERSION = '1.1.4'
 
 const escapeAttr = (value) => (value || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;')
 

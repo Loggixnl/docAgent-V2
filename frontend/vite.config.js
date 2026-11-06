@@ -17,6 +17,13 @@ const apiProxy = {
   '/widget.js': { target: proxyTarget, changeOrigin: true }
 }
 
+// Vite answers CORS preflights itself (before the proxy) and its default
+// origin allowlist only covers localhost, which broke the embeddable widget
+// on every other domain. Reflect the requesting origin so preflights pass
+// for any website; the backend additionally reflects origins on /api/chat
+// and /api/widget/* for the actual responses.
+const corsPermissive = { origin: true }
+
 export default defineConfig({
   plugins: [vue()],
 
@@ -28,12 +35,14 @@ export default defineConfig({
 
   server: {
     port: 5173,
+    cors: corsPermissive,
     proxy: apiProxy
   },
 
   preview: {
     host: '0.0.0.0',
     allowedHosts: true,
+    cors: corsPermissive,
     proxy: apiProxy
   },
 
