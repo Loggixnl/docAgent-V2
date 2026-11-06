@@ -193,7 +193,22 @@ export default {
     errPasswordShort: 'Password must be at least 4 characters long.',
     errAuthFailed: 'Authentication failed. Check your inputs.',
     errResendFailed: 'Failed to resend verification email.',
-    resendSuccess: 'Verification email sent.'
+    resendSuccess: 'Verification email sent.',
+    forgotLink: 'Forgot password?',
+    forgotHeading: 'Forgot your password?',
+    forgotSubtitle: "Enter your email address and we'll send you a link to reset your password.",
+    submitForgot: 'Send reset link',
+    forgotSentIntro: 'We may have sent a password reset link to',
+    forgotSentHint: 'Open the link in the email to choose a new password. The link expires in 30 minutes. If you do not see it, check your spam folder.',
+    resetHeading: 'Choose a new password',
+    resetSubtitle: 'Enter and confirm your new password to regain access to your account.',
+    submitReset: 'Reset password',
+    resetDoneHeading: 'Password reset',
+    resetDoneMsg: 'Your password has been reset successfully. You can now log in with your new password.',
+    showPassword: 'Show password',
+    hidePassword: 'Hide password',
+    errForgotFailed: 'Failed to send the reset email. Please try again.',
+    errResetFailed: 'Failed to reset your password. Please try again.'
   },
 
   header: {

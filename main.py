@@ -129,6 +129,16 @@ class WidgetInquiryRequest(BaseModel):
     description: str
     lang: Optional[str] = "en"  # en | nl
 
+class ForgotPasswordRequest(BaseModel):
+    email: str
+    lang: Optional[str] = "en"  # en | nl
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    password: str
+    confirm_password: str
+    lang: Optional[str] = "en"  # en | nl
+
 # Password hashing helpers
 def hash_password(password: str) -> str:
     salt = secrets.token_bytes(16)
@@ -434,6 +444,79 @@ def resend_verification(request: AuthRequest):
     email_service.send_verification_email(email, verify_token, user.get("first_name", ""), lang)
 
     return generic_response
+
+@app.post("/api/auth/forgot-password")
+def forgot_password(request: ForgotPasswordRequest):
+    """Send a password reset link for an existing, verified account.
+
+    Always returns the same generic message so this endpoint cannot be used
+    to discover which email addresses are registered.
+    """
+    email = request.email.strip().lower()
+    lang = backend_i18n.normalize_lang(request.lang)
+
+    generic_response = {
+        "success": True,
+        "message": backend_i18n.msg(lang, "auth.forgot_generic"),
+    }
+
+    if not is_valid_email(email):
+        return generic_response
+
+    user = vector_db.get_user_by_email(email)
+    # Only verified accounts can log in, so only they may reset a password.
+    if not user or not user.get("email_verified"):
+        return generic_response
+
+    reset_token = secrets.token_urlsafe(32)
+    token_expires = (datetime.now() + timedelta(minutes=30)).isoformat()
+    vector_db.set_password_reset_token(email, reset_token, token_expires)
+    email_service.send_password_reset_email(
+        email, reset_token, user.get("first_name", ""), lang
+    )
+
+    return generic_response
+
+@app.post("/api/auth/reset-password")
+def reset_password(request: ResetPasswordRequest):
+    """Set a new password using the token from the password reset email."""
+    token = request.token.strip()
+    password = request.password
+    confirm_password = request.confirm_password
+    lang = backend_i18n.normalize_lang(request.lang)
+
+    if len(password) < 4:
+        raise HTTPException(status_code=400, detail=backend_i18n.msg(lang, "auth.password_short"))
+
+    if password != confirm_password:
+        raise HTTPException(status_code=400, detail=backend_i18n.msg(lang, "auth.password_mismatch"))
+
+    user = vector_db.get_user_by_reset_token(token)
+    if not user:
+        raise HTTPException(
+            status_code=400,
+            detail=backend_i18n.msg(lang, "auth.reset_invalid_link"),
+        )
+
+    try:
+        expires_at = datetime.fromisoformat(user.get("reset_token_expires") or "")
+    except Exception:
+        expires_at = None
+    if expires_at and datetime.now() > expires_at:
+        vector_db.clear_password_reset_token(user["id"])
+        raise HTTPException(
+            status_code=400,
+            detail=backend_i18n.msg(lang, "auth.reset_expired"),
+        )
+
+    vector_db.update_user_password(user["id"], hash_password(password))
+    # Any hijacked or stale sessions must die with the old password.
+    vector_db.delete_user_sessions(user["id"])
+
+    return {
+        "success": True,
+        "message": backend_i18n.msg(lang, "auth.reset_success"),
+    }
 
 def _verification_page(success: bool, message: str, login_url: str = None, lang: str = "en") -> HTMLResponse:
     """Render a simple server-side HTML page for the email verification link."""

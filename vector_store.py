@@ -119,6 +119,8 @@ class VectorStore:
             email_verified INTEGER DEFAULT 0,
             verification_token TEXT DEFAULT '',
             verification_token_expires TEXT DEFAULT '',
+            reset_token TEXT DEFAULT '',
+            reset_token_expires TEXT DEFAULT '',
             created_at TEXT NOT NULL
         )
         """)
@@ -137,6 +139,8 @@ class VectorStore:
             "email_verified INTEGER DEFAULT 0",
             "verification_token TEXT DEFAULT ''",
             "verification_token_expires TEXT DEFAULT ''",
+            "reset_token TEXT DEFAULT ''",
+            "reset_token_expires TEXT DEFAULT ''",
         ]:
             try:
                 cursor.execute(f"ALTER TABLE users ADD COLUMN {col_def}")
@@ -429,6 +433,56 @@ class VectorStore:
         conn.commit()
         conn.close()
 
+    # --- Password reset ---
+
+    def set_password_reset_token(self, email, token, expires_at):
+        """Set (or replace) the password-reset token for a user."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            self._q("UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE email = ?"),
+            (token, expires_at, email)
+        )
+        conn.commit()
+        conn.close()
+
+    def get_user_by_reset_token(self, token):
+        """Retrieve the user that owns a password-reset token (None if unknown)."""
+        if not token:
+            return None
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            self._q("SELECT id, email, first_name, reset_token_expires FROM users WHERE reset_token = ? AND reset_token != ''"),
+            (token,)
+        )
+        row = cursor.fetchone()
+        res = self._row_to_dict(cursor, row)
+        conn.close()
+        return res
+
+    def update_user_password(self, user_id, password_hash):
+        """Replace a user's password and invalidate any outstanding reset token."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            self._q("UPDATE users SET password_hash = ?, reset_token = '', reset_token_expires = '' WHERE id = ?"),
+            (password_hash, user_id)
+        )
+        conn.commit()
+        conn.close()
+
+    def clear_password_reset_token(self, user_id):
+        """Drop an outstanding (e.g. expired) reset token."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            self._q("UPDATE users SET reset_token = '', reset_token_expires = '' WHERE id = ?"),
+            (user_id,)
+        )
+        conn.commit()
+        conn.close()
+
     # --- Pending registrations: no users row exists until the email is verified ---
 
     def save_pending_registration(self, email, user_id, chatbot_id, first_name, password_hash, token, expires_at):
@@ -690,6 +744,14 @@ class VectorStore:
         conn = self._get_connection()
         cursor = conn.cursor()
         cursor.execute(self._q("DELETE FROM sessions WHERE token = ?"), (token,))
+        conn.commit()
+        conn.close()
+
+    def delete_user_sessions(self, user_id):
+        """Revoke every active session of a user (used after a password reset)."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute(self._q("DELETE FROM sessions WHERE user_id = ?"), (user_id,))
         conn.commit()
         conn.close()
 

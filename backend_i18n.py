@@ -27,6 +27,30 @@ MESSAGES = {
             "This link expires in 24 hours. If you did not create an account, "
             "you can safely ignore this email.\n"
         ),
+        # --- Password reset email (SMTP / plain SendGrid) ---
+        "email.reset_subject": "Reset your password - DocAgent AI",
+        "email.reset_heading": "Reset your password",
+        "email.reset_welcome_html": (
+            "We received a request to reset the password for your "
+            "<strong>DocAgent AI</strong> account."
+        ),
+        "email.reset_button": "Reset Password",
+        "email.reset_expiry_html": (
+            "This link expires in <strong>30 minutes</strong>. If the button doesn't "
+            "work, copy and paste this link into your browser:<br>"
+            '<span style="color: #0d9488;">{url}</span>'
+        ),
+        "email.reset_ignore_html": (
+            "If you did not request a password reset, you can safely ignore this email. "
+            "Your password will not change."
+        ),
+        "email.reset_text": (
+            "DocAgent AI - password reset\n\n"
+            "Open the link below to choose a new password:\n\n"
+            "{url}\n\n"
+            "This link expires in 30 minutes. If you did not request a password reset, "
+            "you can safely ignore this email.\n"
+        ),
         # --- Auth API errors ---
         "auth.invalid_email": "Invalid email address format.",
         "auth.password_short": "Password must be at least 4 characters long.",
@@ -39,6 +63,10 @@ MESSAGES = {
         "auth.invalid_credentials": "Invalid email or password.",
         "auth.not_verified": "Email not verified. Please check your inbox for the verification link, or resend it.",
         "auth.resend_generic": "If an unverified account exists for this email, a verification link has been sent.",
+        "auth.forgot_generic": "If an account exists for this email, a password reset link has been sent.",
+        "auth.reset_invalid_link": "Invalid or already-used password reset link.",
+        "auth.reset_expired": "This password reset link has expired. Please request a new one.",
+        "auth.reset_success": "Your password has been reset. You can now log in with your new password.",
         # --- Verification landing page ---
         "verify.title": "Email Verification - DocAgent AI",
         "verify.success_heading": "Email Verified",
@@ -111,6 +139,30 @@ MESSAGES = {
             "Deze link verloopt over 24 uur. Als je geen account hebt aangemaakt, "
             "kun je deze e-mail veilig negeren.\n"
         ),
+        # --- Password reset email (SMTP / plain SendGrid) ---
+        "email.reset_subject": "Wachtwoord opnieuw instellen - DocAgent AI",
+        "email.reset_heading": "Wachtwoord opnieuw instellen",
+        "email.reset_welcome_html": (
+            "We hebben een verzoek ontvangen om het wachtwoord van je "
+            "<strong>DocAgent AI</strong>-account opnieuw in te stellen."
+        ),
+        "email.reset_button": "Wachtwoord opnieuw instellen",
+        "email.reset_expiry_html": (
+            "Deze link verloopt over <strong>30 minuten</strong>. Werkt de knop niet? "
+            "Kopieer en plak deze link in je browser:<br>"
+            '<span style="color: #0d9488;">{url}</span>'
+        ),
+        "email.reset_ignore_html": (
+            "Als je geen wachtwoordreset hebt aangevraagd, kun je deze e-mail veilig "
+            "negeren. Je wachtwoord wordt niet gewijzigd."
+        ),
+        "email.reset_text": (
+            "DocAgent AI - wachtwoord opnieuw instellen\n\n"
+            "Open de link hieronder om een nieuw wachtwoord te kiezen:\n\n"
+            "{url}\n\n"
+            "Deze link verloopt over 30 minuten. Als je geen wachtwoordreset hebt "
+            "aangevraagd, kun je deze e-mail veilig negeren.\n"
+        ),
         # --- Auth API errors ---
         "auth.invalid_email": "Ongeldig e-mailadresformaat.",
         "auth.password_short": "Wachtwoord moet minstens 4 tekens lang zijn.",
@@ -123,6 +175,10 @@ MESSAGES = {
         "auth.invalid_credentials": "Ongeldig e-mailadres of wachtwoord.",
         "auth.not_verified": "E-mail niet geverifieerd. Controleer je inbox op de verificatielink, of stuur de e-mail opnieuw.",
         "auth.resend_generic": "Als er een niet-geverifieerd account bestaat voor dit e-mailadres, is er een verificatielink verstuurd.",
+        "auth.forgot_generic": "Als er een account bestaat voor dit e-mailadres, is er een wachtwoordresetlink verstuurd.",
+        "auth.reset_invalid_link": "Ongeldige of al gebruikte wachtwoordresetlink.",
+        "auth.reset_expired": "Deze wachtwoordresetlink is verlopen. Vraag een nieuwe aan.",
+        "auth.reset_success": "Je wachtwoord is opnieuw ingesteld. Je kunt nu inloggen met je nieuwe wachtwoord.",
         # --- Verification landing page ---
         "verify.title": "E-mailverificatie - DocAgent AI",
         "verify.success_heading": "E-mail geverifieerd",

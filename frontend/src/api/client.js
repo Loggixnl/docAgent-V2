@@ -480,6 +480,44 @@ export async function resendVerification(email) {
   return res.json();
 }
 
+// Ask for a password reset link. The backend always answers with the same
+// generic message so registered emails cannot be discovered.
+export async function forgotPassword(email) {
+  const res = await fetch(apiUrl('/api/auth/forgot-password'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, lang: getStoredLang() })
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to send password reset email.');
+  }
+
+  return res.json();
+}
+
+// Consume the token from the password reset email and store the new password.
+export async function resetPassword(token, password, confirmPassword) {
+  const res = await fetch(apiUrl('/api/auth/reset-password'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      token,
+      password,
+      confirm_password: confirmPassword,
+      lang: getStoredLang()
+    })
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to reset password.');
+  }
+
+  return res.json();
+}
+
 // Consume an email-verification link token. Returns { success, message } regardless of
 // HTTP status (400 carries the localized failure message, not an exception).
 export async function verifyEmail(token, lang = getStoredLang()) {

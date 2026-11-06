@@ -79,7 +79,8 @@
     <!-- MODALS -->
     <AuthModal 
       :is-open="isAuthModalOpen"
-      @close="closeAuthModal"
+      :reset-token="pendingResetToken"
+      @close="handleAuthClose"
       @success="handleAuthSuccess"
     />
 
@@ -200,9 +201,11 @@ const isSettingsModalOpen = ref(false)
 const isWidgetModalOpen = ref(false)
 const isMobileSidebarOpen = ref(false)
 const verifyResult = ref(null) // null | { loading: true } | { success, message }
+const pendingResetToken = ref('') // token from the password reset email
 
 onMounted(async () => {
   await handleVerificationLink()
+  handlePasswordResetLink()
   const hasSession = await checkSession()
   if (hasSession) {
     await Promise.all([
@@ -240,6 +243,29 @@ async function handleVerificationLink() {
 function closeVerifyResult(openLogin) {
   verifyResult.value = null
   if (openLogin) openAuthModal('login')
+}
+
+// Handles /?reset_token=...&lang=... links from password reset emails:
+// applies the link language, cleans the URL, and opens the auth modal on the
+// "choose a new password" step with the token attached.
+function handlePasswordResetLink() {
+  const params = new URLSearchParams(window.location.search)
+  const token = params.get('reset_token')
+  if (!token) return
+
+  const rLang = params.get('lang')
+  if (rLang) setLang(rLang)
+
+  // Clean the URL immediately so a refresh does not reopen the reset step
+  window.history.replaceState({}, document.title, window.location.pathname)
+
+  pendingResetToken.value = token
+  openAuthModal('reset')
+}
+
+function handleAuthClose() {
+  pendingResetToken.value = ''
+  closeAuthModal()
 }
 
 async function handleAuthSuccess() {

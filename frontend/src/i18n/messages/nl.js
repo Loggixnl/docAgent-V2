@@ -193,7 +193,22 @@ export default {
     errPasswordShort: 'Wachtwoord moet minstens 4 tekens lang zijn.',
     errAuthFailed: 'Authenticatie mislukt. Controleer je gegevens.',
     errResendFailed: 'Verificatie-e-mail opnieuw versturen mislukt.',
-    resendSuccess: 'Verificatie-e-mail verstuurd.'
+    resendSuccess: 'Verificatie-e-mail verstuurd.',
+    forgotLink: 'Wachtwoord vergeten?',
+    forgotHeading: 'Wachtwoord vergeten?',
+    forgotSubtitle: 'Voer je e-mailadres in en we sturen je een link om je wachtwoord opnieuw in te stellen.',
+    submitForgot: 'Resetlink versturen',
+    forgotSentIntro: 'We hebben mogelijk een wachtwoordresetlink gestuurd naar',
+    forgotSentHint: 'Open de link in de e-mail om een nieuw wachtwoord te kiezen. De link verloopt over 30 minuten. Staat de e-mail er niet in? Controleer dan je spammap.',
+    resetHeading: 'Kies een nieuw wachtwoord',
+    resetSubtitle: 'Voer je nieuwe wachtwoord in en bevestig het om weer toegang te krijgen tot je account.',
+    submitReset: 'Wachtwoord opnieuw instellen',
+    resetDoneHeading: 'Wachtwoord opnieuw ingesteld',
+    resetDoneMsg: 'Je wachtwoord is succesvol opnieuw ingesteld. Je kunt nu inloggen met je nieuwe wachtwoord.',
+    showPassword: 'Wachtwoord tonen',
+    hidePassword: 'Wachtwoord verbergen',
+    errForgotFailed: 'Versturen van de reset-e-mail mislukt. Probeer het opnieuw.',
+    errResetFailed: 'Wachtwoord opnieuw instellen mislukt. Probeer het opnieuw.'
   },
 
   header: {

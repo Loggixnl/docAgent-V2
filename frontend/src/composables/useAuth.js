@@ -5,6 +5,8 @@ import {
   loginUser,
   registerUser,
   resendVerification,
+  forgotPassword,
+  resetPassword,
   getMe,
   logoutUser,
   getSettings,
@@ -26,7 +28,7 @@ const username = computed(() => {
 })
 
 const isAuthModalOpen = ref(false)
-const authMode = ref('login') // 'login' | 'register'
+const authMode = ref('login') // 'login' | 'register' | 'forgot' | 'reset'
 
 // Initialize onUnauthorized handler
 setOnUnauthorized(() => {
@@ -149,6 +151,8 @@ export function useAuth() {
     login: handleLogin,
     register: handleRegister,
     resendVerification: handleResendVerification,
+    forgotPassword,
+    resetPassword,
     logout: handleLogout,
     loadSettings,
     updateSettings,

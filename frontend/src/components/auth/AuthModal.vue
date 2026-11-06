@@ -117,13 +117,53 @@
             </div>
           </div>
 
+          <!-- Forgot password: reset link sent notice -->
+          <div v-else-if="forgotSent" class="text-center py-4">
+            <div class="w-16 h-16 rounded-full bg-lightTeal/20 text-darkTeal flex items-center justify-center text-4xl mx-auto mb-5">
+              <i class="mdi mdi-email-lock-outline"></i>
+            </div>
+            <h3 class="text-xl font-bold text-slate-900 font-heading mb-2">{{ $t('auth.checkEmail') }}</h3>
+            <p class="text-xs text-slate-600 leading-relaxed font-medium mb-2">
+              {{ $t('auth.forgotSentIntro') }}
+            </p>
+            <p class="text-sm font-bold text-darkTeal mb-4">{{ email.trim().toLowerCase() }}</p>
+            <p class="text-xs text-slate-500 font-medium mb-6">
+              {{ $t('auth.forgotSentHint') }}
+            </p>
+            <button
+              type="button"
+              class="text-darkTeal hover:underline text-xs font-bold cursor-pointer"
+              @click="backToLogin"
+            >
+              {{ $t('auth.backToLogin') }}
+            </button>
+          </div>
+
+          <!-- Password reset completed notice -->
+          <div v-else-if="resetDone" class="text-center py-4">
+            <div class="w-16 h-16 rounded-full bg-green-50 text-green-600 flex items-center justify-center text-4xl mx-auto mb-5">
+              <i class="mdi mdi-lock-check-outline"></i>
+            </div>
+            <h3 class="text-xl font-bold text-slate-900 font-heading mb-2">{{ $t('auth.resetDoneHeading') }}</h3>
+            <p class="text-xs text-slate-600 leading-relaxed font-medium mb-6">
+              {{ resetMessage || $t('auth.resetDoneMsg') }}
+            </p>
+            <button
+              type="button"
+              class="w-full py-3 rounded-full bg-darkTeal text-white font-bold text-xs shadow-md shadow-darkTeal/20 hover:bg-darkTeal/90 transition-all cursor-pointer"
+              @click="backToLogin"
+            >
+              {{ $t('auth.backToLogin') }}
+            </button>
+          </div>
+
           <template v-else>
           <div class="mb-6">
             <h3 class="text-xl font-bold text-slate-900 font-heading">
-              {{ isRegister ? $t('auth.createHeading') : $t('auth.loginHeading') }}
+              {{ headingText }}
             </h3>
             <p class="text-xs text-slate-500 mt-1 font-medium">
-              {{ isRegister ? $t('auth.registerSubtitle') : $t('auth.loginSubtitle') }}
+              {{ subtitleText }}
             </p>
           </div>
 
@@ -160,7 +200,7 @@
               </div>
             </div>
 
-            <div class="flex flex-col gap-1.5">
+            <div v-if="!isReset" class="flex flex-col gap-1.5">
               <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{{ $t('auth.emailLabel') }}</label>
               <div class="relative flex items-center">
                 <i class="mdi mdi-email-outline absolute left-4 text-darkTeal text-base"></i>
@@ -170,35 +210,66 @@
                   :placeholder="$t('auth.emailPlaceholder')"
                   class="w-full bg-white border border-gray-300 focus:border-darkTeal focus:ring-1 focus:ring-darkTeal/20 outline-none rounded-xl py-2.5 pl-11 pr-4 text-xs text-slate-900 placeholder-gray-400 transition-all font-medium"
                   required
+                  autocomplete="email"
                 >
               </div>
             </div>
 
-            <div class="flex flex-col gap-1.5">
+            <div v-if="!isForgot" class="flex flex-col gap-1.5">
               <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{{ $t('auth.password') }}</label>
               <div class="relative flex items-center">
                 <i class="mdi mdi-lock-outline absolute left-4 text-darkTeal text-base"></i>
                 <input
                   v-model="password"
-                  type="password"
+                  :type="showPassword ? 'text' : 'password'"
                   placeholder="••••••••"
-                  class="w-full bg-white border border-gray-300 focus:border-darkTeal focus:ring-1 focus:ring-darkTeal/20 outline-none rounded-xl py-2.5 pl-11 pr-4 text-xs text-slate-900 placeholder-gray-400 transition-all font-medium"
+                  class="w-full bg-white border border-gray-300 focus:border-darkTeal focus:ring-1 focus:ring-darkTeal/20 outline-none rounded-xl py-2.5 pl-11 pr-11 text-xs text-slate-900 placeholder-gray-400 transition-all font-medium"
                   required
+                  :autocomplete="isReset || isRegister ? 'new-password' : 'current-password'"
                 >
+                <button
+                  type="button"
+                  class="absolute right-3 w-6 h-6 flex items-center justify-center text-slate-400 hover:text-darkTeal transition-color cursor-pointer"
+                  :title="showPassword ? $t('auth.hidePassword') : $t('auth.showPassword')"
+                  :aria-label="showPassword ? $t('auth.hidePassword') : $t('auth.showPassword')"
+                  @click="showPassword = !showPassword"
+                >
+                  <i :class="showPassword ? 'mdi mdi-eye-off-outline' : 'mdi mdi-eye-outline'" class="text-sm"></i>
+                </button>
               </div>
             </div>
 
-            <div v-if="isRegister" class="flex flex-col gap-1.5">
+            <div v-if="!isRegister && !isForgot && !isReset" class="flex justify-end -mt-1">
+              <button
+                type="button"
+                class="text-darkTeal hover:underline text-xs font-bold cursor-pointer"
+                @click="goToForgot"
+              >
+                {{ $t('auth.forgotLink') }}
+              </button>
+            </div>
+
+            <div v-if="isRegister || isReset" class="flex flex-col gap-1.5">
               <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{{ $t('auth.confirmPassword') }}</label>
               <div class="relative flex items-center">
                 <i class="mdi mdi-lock-check-outline absolute left-4 text-darkTeal text-base"></i>
                 <input
                   v-model="confirmPassword"
-                  type="password"
+                  :type="showConfirmPassword ? 'text' : 'password'"
                   placeholder="••••••••"
-                  class="w-full bg-white border border-gray-300 focus:border-darkTeal focus:ring-1 focus:ring-darkTeal/20 outline-none rounded-xl py-2.5 pl-11 pr-4 text-xs text-slate-900 placeholder-gray-400 transition-all font-medium"
-                  :required="isRegister"
+                  class="w-full bg-white border border-gray-300 focus:border-darkTeal focus:ring-1 focus:ring-darkTeal/20 outline-none rounded-xl py-2.5 pl-11 pr-11 text-xs text-slate-900 placeholder-gray-400 transition-all font-medium"
+                  :required="isRegister || isReset"
+                  autocomplete="new-password"
                 >
+                <button
+                  type="button"
+                  class="absolute right-3 w-6 h-6 flex items-center justify-center text-slate-400 hover:text-darkTeal transition-color cursor-pointer"
+                  :title="showConfirmPassword ? $t('auth.hidePassword') : $t('auth.showPassword')"
+                  :aria-label="showConfirmPassword ? $t('auth.hidePassword') : $t('auth.showPassword')"
+                  @click="showConfirmPassword = !showConfirmPassword"
+                >
+                  <i :class="showConfirmPassword ? 'mdi mdi-eye-off-outline' : 'mdi mdi-eye-outline'" class="text-sm"></i>
+                </button>
               </div>
             </div>
 
@@ -208,20 +279,31 @@
               class="w-full py-3 rounded-full bg-darkTeal text-white font-bold text-xs shadow-md shadow-darkTeal/20 hover:bg-darkTeal/90 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 mt-6 cursor-pointer disabled:opacity-50"
             >
               <i v-if="loading" class="mdi mdi-loading mdi-spin"></i>
-              <span>{{ loading ? $t('auth.processing') : (isRegister ? $t('auth.submitRegister') : $t('auth.submitLogin')) }}</span>
+              <span>{{ loading ? $t('auth.processing') : submitLabel }}</span>
               <i v-if="!loading" class="mdi mdi-arrow-right text-xs"></i>
             </button>
           </form>
 
           <div class="mt-6 text-center text-xs text-slate-600">
-            <span>{{ isRegister ? $t('auth.haveAccount') : $t('auth.noAccount') }}</span>
-            <button
-              type="button"
-              class="text-darkTeal hover:underline ml-1 font-bold cursor-pointer"
-              @click="toggleMode"
-            >
-              {{ isRegister ? $t('auth.loginLink') : $t('auth.registerLink') }}
-            </button>
+            <template v-if="isForgot || isReset">
+              <button
+                type="button"
+                class="text-darkTeal hover:underline font-bold cursor-pointer"
+                @click="backToLogin"
+              >
+                {{ $t('auth.backToLogin') }}
+              </button>
+            </template>
+            <template v-else>
+              <span>{{ isRegister ? $t('auth.haveAccount') : $t('auth.noAccount') }}</span>
+              <button
+                type="button"
+                class="text-darkTeal hover:underline ml-1 font-bold cursor-pointer"
+                @click="toggleMode"
+              >
+                {{ isRegister ? $t('auth.loginLink') : $t('auth.registerLink') }}
+              </button>
+            </template>
           </div>
           </template>
         </div>
@@ -243,20 +325,30 @@ const props = defineProps({
   initialMode: {
     type: String,
     default: 'login'
+  },
+  resetToken: {
+    type: String,
+    default: ''
   }
 })
 
 const emit = defineEmits(['close', 'success'])
 
-const { login, register, resendVerification, authMode } = useAuth()
+const { login, register, resendVerification, forgotPassword, resetPassword, authMode } = useAuth()
 
 const isRegister = computed(() => authMode.value === 'register')
+const isForgot = computed(() => authMode.value === 'forgot')
+const isReset = computed(() => authMode.value === 'reset')
 const email = ref('')
 const firstName = ref('')
 const password = ref('')
 const confirmPassword = ref('')
 const loading = ref(false)
 const errorMessage = ref('')
+
+// Password visibility toggles
+const showPassword = ref(false)
+const showConfirmPassword = ref(false)
 
 // Email verification state
 const verificationSent = ref(false)
@@ -265,25 +357,66 @@ const resendLoading = ref(false)
 const resendMessage = ref('')
 const showResendOnLoginError = ref(false)
 
-function toggleMode() {
-  authMode.value = authMode.value === 'login' ? 'register' : 'login'
+// Forgot / reset password state
+const forgotSent = ref(false)
+const resetDone = ref(false)
+const resetMessage = ref('')
+
+const headingText = computed(() => {
+  if (isForgot.value) return t('auth.forgotHeading')
+  if (isReset.value) return t('auth.resetHeading')
+  return isRegister.value ? t('auth.createHeading') : t('auth.loginHeading')
+})
+
+const subtitleText = computed(() => {
+  if (isForgot.value) return t('auth.forgotSubtitle')
+  if (isReset.value) return t('auth.resetSubtitle')
+  return isRegister.value ? t('auth.registerSubtitle') : t('auth.loginSubtitle')
+})
+
+const submitLabel = computed(() => {
+  if (isForgot.value) return t('auth.submitForgot')
+  if (isReset.value) return t('auth.submitReset')
+  return isRegister.value ? t('auth.submitRegister') : t('auth.submitLogin')
+})
+
+function resetFormState() {
   errorMessage.value = ''
   resendMessage.value = ''
   showResendOnLoginError.value = false
+  password.value = ''
+  confirmPassword.value = ''
+  showPassword.value = false
+  showConfirmPassword.value = false
+}
+
+function toggleMode() {
+  authMode.value = authMode.value === 'login' ? 'register' : 'login'
+  resetFormState()
+}
+
+function goToForgot() {
+  authMode.value = 'forgot'
+  resetFormState()
+  forgotSent.value = false
+  resetDone.value = false
 }
 
 function close() {
-  errorMessage.value = ''
-  resendMessage.value = ''
-  showResendOnLoginError.value = false
+  resetFormState()
   verificationSent.value = false
+  forgotSent.value = false
+  resetDone.value = false
+  resetMessage.value = ''
   emit('close')
 }
 
 function backToLogin() {
   verificationSent.value = false
-  resendMessage.value = ''
-  errorMessage.value = ''
+  forgotSent.value = false
+  resetDone.value = false
+  resetMessage.value = ''
+  resetFormState()
   authMode.value = 'login'
 }
 
@@ -294,6 +427,52 @@ async function handleSubmit() {
   const trimmedEmail = email.value.trim().toLowerCase()
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+  // --- Forgot password: only an email address is required ---
+  if (isForgot.value) {
+    if (!emailRegex.test(trimmedEmail)) {
+      errorMessage.value = t('auth.errInvalidEmail')
+      return
+    }
+
+    loading.value = true
+    try {
+      await forgotPassword(trimmedEmail)
+      forgotSent.value = true
+    } catch (err) {
+      errorMessage.value = err.message || t('auth.errForgotFailed')
+    } finally {
+      loading.value = false
+    }
+    return
+  }
+
+  // --- Reset password: new password + confirmation, identity comes from the token ---
+  if (isReset.value) {
+    if (password.value !== confirmPassword.value) {
+      errorMessage.value = t('auth.errMismatch')
+      return
+    }
+    if (password.value.length < 4) {
+      errorMessage.value = t('auth.errPasswordShort')
+      return
+    }
+
+    loading.value = true
+    try {
+      const data = await resetPassword(props.resetToken, password.value, confirmPassword.value)
+      resetMessage.value = data.message || ''
+      resetDone.value = true
+      password.value = ''
+      confirmPassword.value = ''
+    } catch (err) {
+      errorMessage.value = err.message || t('auth.errResetFailed')
+    } finally {
+      loading.value = false
+    }
+    return
+  }
+
   if (!emailRegex.test(trimmedEmail)) {
     errorMessage.value = t('auth.errInvalidEmail')
     return
